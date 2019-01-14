@@ -1,7 +1,0 @@
-# Choose mode for RFI model.
-mode = 1
-rfi_replace_mode = 1
-
-mad_threshold = 2.5
-out = 10
----
