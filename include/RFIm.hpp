@@ -126,7 +126,7 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
 {
     for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
     {
-        if ( ordering == DataOrdering::FrequencyTime )
+        if ( ordering == FrequencyTime )
         {
             for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
             {
@@ -140,7 +140,7 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
                     DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
                     if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
                     {
-                        if ( replacement == ReplacementStrategy::ReplaceWithMean )
+                        if ( replacement == ReplaceWithMean )
                         {
                             time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
                         }
@@ -154,7 +154,7 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
 template<typename DataType>
 std::string * RFIm::getTimeDomainSigmaCutOpenCL(const rfiConfig &config, const DataOrdering &ordering, const ReplacementStrategy &replacement, const std::string &dataTypeName, const AstroData::Observation &observation, const float sigmaCut, const unsigned int padding)
 {
-    if ( (ordering == DataOrdering::FrequencyTime) && (replacement == ReplacementStrategy::ReplaceWithMean) )
+    if ( (ordering == FrequencyTime) && (replacement == ReplaceWithMean) )
     {
         return getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean<DataType>(config, dataTypeName, observation, sigmaCut, padding);
     }
@@ -170,7 +170,7 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     + config.getIntType() + " threshold = 0;\n"
     "float delta = 0.0f;\n"
     "float mean = 0.0f;\n"
-    "float threshold = 0.0f;\n"
+    "float sigma_cut = 0.0f;\n"
     + dataTypeName + " sample_value;\n"
     "__local float reductionCOU[" + std::to_string(config.getNrThreadsD0()) + "];\n"
     "__local float reductionMEA[" + std::to_string(config.getNrThreadsD0()) + "];\n"
@@ -203,8 +203,8 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     "barrier(CLK_LOCAL_MEM_FENCE);\n"
     "}\n"
     "mean = reductionMEA[0];\n"
-    "threshold = (" + std::to_string(sigmaCut) + " * native_sqrt(reductionVAR[0] * " + std::to_string(1.0f/(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) - 1)) + "f));\n"
-    "// Replace samples over the threshold with mean\n"
+    "sigma_cut = (" + std::to_string(sigmaCut) + " * native_sqrt(reductionVAR[0] * " + std::to_string(1.0f/(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) - 1)) + "f));\n"
+    "// Replace samples over the sigma cut with mean\n"
     "for (" + config.getIntType() + " sample_id = get_local_id(0); sample_id < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + "; sample_id += " + std::to_string(config.getNrThreadsD0() * config.getNrItemsD0()) + " ) "
     "{\n"
     "<%REPLACE%>"
@@ -234,11 +234,11 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     "counter_0 += counter_<%ITEM_NUMBER%>;\n"
     "mean_0 = (((counter_0 - counter_<%ITEM_NUMBER%>) * mean_0) + (counter_<%ITEM_NUMBER%> * mean_<%ITEM_NUMBER%>)) / counter_0;\n"
     "variance_0 += variance_<%ITEM_NUMBER%> + ((delta * delta) * (((counter_0 - counter_<%ITEM_NUMBER%>) * counter_<%ITEM_NUMBER%>) / counter_0));\n";
-    std::string replaceConditionTemplate = "if ( time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] > (mean + threshold) ) {\n"
+    std::string replaceConditionTemplate = "if ( time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] > (mean + sigma_cut) ) {\n"
     "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] = mean;"
     "}\n";
     std::string replaceTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];"
-    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] = (sample_value * (convert_float(sample_value < (mean + threshold)))) + (mean * (convert_float(sample > mean + threshold)));";
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] = (sample_value * (convert_float(sample_value < (mean + sigma_cut)))) + (mean * (convert_float(sample > mean + sigma_cut)));";
     // End of kernel template
     // Code generation
     std::string localVariables;
