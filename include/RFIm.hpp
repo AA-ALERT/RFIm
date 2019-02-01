@@ -27,10 +27,25 @@ namespace RFIm
  */
 class rfiConfig : public isa::OpenCL::KernelConf
 {
+public:
+    rfiConfig();
+    ~rfiConfig();
+    // Get
+    bool getSubbandDedispersion() const;
+    bool getConditionalReplacement() const;
+    // Set
+    void setSubbandDedispersion(bool subband);
+    void setConditionalReplacement(bool replacement);
+    // utils
+    std::string print() const;
+
+private:
+    bool subbandDedispersion;
+    bool conditionalReplacement;
 };
 
 /**
- ** @brief Ordering of input data.
+ ** @brief Ordering of input/output data.
  */
 enum DataOrdering
 {
@@ -90,7 +105,147 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
 {
     std::string *code = new std::string();
     // Kernel template
+    *code = "__kernel void timeDomainSigmaCut(__global const " + dataTypeName + " * const restrict time_series) {\n"
+    + config.getIntType() + " threshold = 0;\n"
+    "float delta = 0.0f;\n"
+    "float mean = 0.0f;\n"
+    "float threshold = 0.0f;\n"
+    + dataTypeName + " sample_value;\n"
+    "__local float reductionCOU[" + std::to_string(config.getNrThreadsD0()) + "];\n"
+    "__local float reductionMEA[" + std::to_string(config.getNrThreadsD0()) + "];\n"
+    "__local float reductionVAR[" + std::to_string(config.getNrThreadsD0()) + "];\n"
+    "<%LOCAL_VARIABLES%>"
+    "\n"
+    "// Compute mean and standard deviation\n"
+    "for ( " + config.getIntType() + " sample_id = get_local_id(0) + " + std::to_string(config.getNrThreadsD0() * config.getNrItemsD0()) + "; sample_id < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + "; sample_id += " + std::to_string(config.getNrThreadsD0() * config.getNrItemsD0()) + " ) "
+    "{\n"
+    "<%LOCAL_COMPUTE%>"
+    "}\n"
+    "// Local reduction (if necessary)\n"
+    "<%LOCAL_REDUCE%>"
+    "reductionCOU[get_local_id(0)] = counter_0;\n"
+    "reductionMEA[get_local_id(0)] = mean_0;\n"
+    "reductionVAR[get_local_id(0)] = variance_0;\n"
+    "barrier(CLK_LOCAL_MEM_FENCE);\n"
+    "// Global reduction\n"
+    "threshold = " + std::to_string(config.getNrThreadsD0() / 2) + ";\n"
+    "for (" + config.getIntType() + " sample_id = get_local_id(0); threshold > 0; threshold /= 2 ) {\n"
+    "if ( (sample_id < threshold)) {\n"
+    "delta = reductionMEA[sample_id + threshold] - mean_0;\n"
+    "counter_0 += reductionCOU[sample_id + threshold];\n"
+    "mean_0 = ((reductionCOU[sample_id] * mean_0) + (reductionCOU[sample_id + threshold] * reductionMEA[sample_id + threshold])) / counter_0;\n"
+    "variance_0 += reductionVAR[sample_id + threshold] + ((delta * delta) * ((reductionCOU[sample_id] * reductionCOU[sample_id + threshold]) / counter_0));\n"
+    "reductionCOU[sample_id] = counter_0;\n"
+    "reductionMEA[sample_id] = mean_0;\n"
+    "reductionVAR[sample_id] = variance_0;\n"
+    "}\n"
+    "barrier(CLK_LOCAL_MEM_FENCE);\n"
+    "}\n"
+    "mean = reductionMEA[0];\n"
+    "threshold = (" + std::to_string(sigmaCut) + " * native_sqrt(reductionVAR[0] * " + std::to_string(1.0f/(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) - 1)) + "f));\n"
+    "// Replace samples over the threshold with mean\n"
+    "for (" + config.getIntType() + " sample_id = get_local_id(0); sample_id < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + "; sample_id += " + std::to_string(config.getNrThreadsD0() * config.getNrItemsD0()) + " ) "
+    "{\n"
+    "<%REPLACE%>"
+    "}\n"
+    "}\n";
+    // Declaration of per thread variables
+    std::string localVariablesTemplate = "float counter_<%ITEM_NUMBER%> = 1.0f;\n"
+    "float variance_<%ITEM_NUMBER%> = 0.0f;\n"
+    "float mean_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n";
+    // Local compute
+    // Version without boundary checks
+    std::string localComputeNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
+    "counter_<%ITEM_NUMBER%> += 1.0f;\n"
+    "delta = value - mean_<%ITEM_NUMBER%>;\n"
+    "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
+    "variance_<%ITEM_NUMBER%> += delta * (value - mean_<%ITEM_NUMBER%>);\n";
+    // Version with boundary checks
+    std::string localComputeCheckTemplate = "if ( sample_id + <%ITEM_OFFSET%> < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + " ) {\n"
+    "value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
+    "counter_<%ITEM_NUMBER%> += 1.0f;\n"
+    "delta = value - mean_<%ITEM_NUMBER%>;\n"
+    "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
+    "variance_<%ITEM_NUMBER%> += delta * (value - mean_<%ITEM_NUMBER%>);\n"
+    "}\n";
+    // In-thread reduction
+    std::string localReduceTemplate = "delta = mean_<%ITEM_NUMBER%> - mean_0;\n"
+    "counter_0 += counter_<%ITEM_NUMBER%>;\n"
+    "mean_0 = (((counter_0 - counter_<%ITEM_NUMBER%>) * mean_0) + (counter_<%ITEM_NUMBER%> * mean_<%ITEM_NUMBER%>)) / counter_0;\n"
+    "variance_0 += variance_<%ITEM_NUMBER%> + ((delta * delta) * (((counter_0 - counter_<%ITEM_NUMBER%>) * counter_<%ITEM_NUMBER%>) / counter_0));\n";
+    std::string replaceConditionTemplate = "if ( time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] > (mean + threshold) ) {\n"
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] = mean;"
+    "}\n";
+    std::string replaceTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];"
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>] = (sample_value * (convert_float(sample_value < (mean + threshold)))) + (mean * (convert_float(sample > mean + threshold)));";
     // End of kernel template
     // Code generation
+    std::string localVariables;
+    std::string localCompute;
+    std::string localReduce;
+    std::string replace;
+    for ( unsigned int item = 0; item < config.getNrItemsD0(); item++ )
+    {
+        std::string * temp;
+        std::string itemString = std::to_string(item);
+        std::string itemOffsetString = std::to_string(item * config.getNrThreadsD0());
+        temp = isa::utils::replace(&localVariablesTemplate, "<%ITEM_NUMBER%>", itemString);
+        if ( item == 0 )
+        {
+            temp = isa::utils::replace(temp, " + <%ITEM_OFFSET%>", std::string(), true);
+        }
+        else
+        {
+            temp = isa::utils::replace(temp, "<%ITEM_OFFSET%>", itemOffsetString, true);
+        }
+        localVariables.append(*temp);
+        delete temp;
+        if ( (observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) % (config.getNrThreadsD0() * config.getNrItemsD0())) == 0 )
+        {
+            temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        else
+        {
+            temp = isa::utils::replace(&localComputeCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        if ( item == 0 )
+        {
+            temp = isa::utils::replace(temp, " + <%ITEM_OFFSET%>", std::string(), true);
+        }
+        else
+        {
+            temp = isa::utils::replace(temp, "<%ITEM_OFFSET%>", itemOffsetString, true);
+        }
+        localCompute.append(*temp);
+        delete temp;
+        if ( item > 0 )
+        {
+            temp = isa::utils::replace(&localReduceTemplate, "<%ITEM_NUMBER%>", itemString);
+            localReduce.append(*temp);
+            delete temp;
+        }
+        delete temp;
+        if ( config.getConditionalReplacement() )
+        {
+            temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        else
+        {
+            temp = isa::utils::replace(&replaceTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        if ( item == 0 )
+        {
+            temp = isa::utils::replace(temp, " + <%ITEM_OFFSET%>", std::string(), true);
+        }
+        else
+        {
+            temp = isa::utils::replace(temp, "<%ITEM_OFFSET%>", itemOffsetString, true);
+        }
+        replace.append(*temp);
+    }
+    code = isa::utils::replace(code, "<%LOCAL_VARIABLES%>", localVariables, true);
+    code = isa::utils::replace(code, "<%LOCAL_COMPUTE%>", localCompute, true);
+    code = isa::utils::replace(code, "<%LOCAL_REDUCE%>", localReduce, true);
+    code = isa::utils::replace(code, "<%REPLACE%>", replace, true);
     return code;
 }
