@@ -14,8 +14,10 @@
 
 #include <Kernel.hpp>
 #include <Observation.hpp>
+#include <Statistics.hpp>
 
 #include <string>
+#include <vector>
 
 #pragma once
 
@@ -75,9 +77,24 @@ enum ReplacementStrategy
 };
 
 /**
+ ** @brief Compute time domain sigma cut.
+ ** Not optimized, just for testing purpose.
+ **
+ ** @param ordering The ordering of the data.
+ ** @param replacement The replacement strategy for flagged samples.
+ ** @param observation The observation object.
+ ** @param time_series The input data.
+ ** @param sigmaCut The threshold value for the sigma cut.
+ ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ */
+template<typename DataType>
+void timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering &ordering, const ReplacementStrategy &replacement, const AstroData::Observation &observation, std::vector<DataType> &time_series, const float sigmaCut, const unsigned int padding);
+
+/**
  ** @brief Generates the OpenCL code for the time domain sigma cut.
+ **
  ** @param rfiConfig The kernel configuration.
- ** @param ordering The ordering of the input.
+ ** @param ordering The ordering of the data.
  ** @param replacement The replacement strategy for flagged samples.
  ** @param dataTypeName The name of the input data type.
  ** @param observation The observation object.
@@ -86,9 +103,11 @@ enum ReplacementStrategy
  */
 template<typename DataType>
 std::string * getTimeDomainSigmaCutOpenCL(const rfiConfig &config, const DataOrdering &ordering, const ReplacementStrategy &replacement, const std::string &dataTypeName, const AstroData::Observation &observation, const float sigmaCut, const unsigned int padding);
+
 /**
  ** @brief Generates the OpenCL code for the time domain sigma cut.
  ** This function generates specialized code for the case in which the input is FrequencyTime ordered and flagged samples are replaced with the mean.
+ **
  ** @param rfiConfig The kernel configuration.
  ** @param dataTypeName The name of the input data type.
  ** @param observation The observation object.
@@ -100,8 +119,35 @@ std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const rf
 
 } // RFIm
 
-
 // Implementations
+
+template<typename DataType>
+void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering &ordering, const ReplacementStrategy &replacement, const AstroData::Observation &observation, std::vector<DataType> &time_series, const float sigmaCut, const unsigned int padding)
+{
+    for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
+    {
+        if ( ordering == DataOrdering::FrequencyTime )
+        {
+            for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+            {
+                isa::utils::Statistics<DataType> statistics;
+                for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
+                {
+                    statistics.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
+                }
+                for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
+                {
+                    DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
+                    if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
+                    {
+                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                    }
+                }
+            }
+        }
+    }
+}
+
 template<typename DataType>
 std::string * RFIm::getTimeDomainSigmaCutOpenCL(const rfiConfig &config, const DataOrdering &ordering, const ReplacementStrategy &replacement, const std::string &dataTypeName, const AstroData::Observation &observation, const float sigmaCut, const unsigned int padding)
 {
