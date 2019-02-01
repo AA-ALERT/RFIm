@@ -30,13 +30,25 @@ class rfiConfig : public isa::OpenCL::KernelConf
 public:
     rfiConfig();
     ~rfiConfig();
-    // Get
+    /**
+     ** @brief Return true if in subbanding mode, false otherwise.
+     */
     bool getSubbandDedispersion() const;
+    /**
+     ** @brief Return true if using a condition for replacement, false otherwise.
+     */
     bool getConditionalReplacement() const;
-    // Set
+    /**
+     ** @brief Set the subbanding mode.
+     */
     void setSubbandDedispersion(bool subband);
+    /**
+     ** @brief Set the conditional replacement mode.
+     */
     void setConditionalReplacement(bool replacement);
-    // utils
+    /**
+     ** @brief Print the configuration.
+     */
     std::string print() const;
 
 private:
