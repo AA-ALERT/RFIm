@@ -93,7 +93,7 @@ void timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering &orde
 /**
  ** @brief Generates the OpenCL code for the time domain sigma cut.
  **
- ** @param rfiConfig The kernel configuration.
+ ** @param config The kernel configuration.
  ** @param ordering The ordering of the data.
  ** @param replacement The replacement strategy for flagged samples.
  ** @param dataTypeName The name of the input data type.
@@ -108,7 +108,7 @@ std::string * getTimeDomainSigmaCutOpenCL(const rfiConfig &config, const DataOrd
  ** @brief Generates the OpenCL code for the time domain sigma cut.
  ** This function generates specialized code for the case in which the input is FrequencyTime ordered and flagged samples are replaced with the mean.
  **
- ** @param rfiConfig The kernel configuration.
+ ** @param config The kernel configuration.
  ** @param dataTypeName The name of the input data type.
  ** @param observation The observation object.
  ** @param sigmaCut The threshold value for the sigma cut.
@@ -140,7 +140,10 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
                     DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
                     if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
                     {
-                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                        if ( replacement == ReplacementStrategy::ReplaceWithMean )
+                        {
+                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                        }
                     }
                 }
             }
