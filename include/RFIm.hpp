@@ -28,7 +28,7 @@ namespace RFIm
 {
 
 /**
- ** @brief RFI specific configuration.
+ ** @brief RFI specific kernel configuration.
  */
 class rfiConfig : public isa::OpenCL::KernelConf
 {
