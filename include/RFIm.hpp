@@ -15,9 +15,12 @@
 #include <Kernel.hpp>
 #include <Observation.hpp>
 #include <Statistics.hpp>
+#include <utils.hpp>
+#include <InitializeOpenCL.hpp>
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 #pragma once
 
@@ -80,6 +83,7 @@ enum ReplacementStrategy
  ** @brief Compute time domain sigma cut.
  ** Not optimized, just for testing purpose.
  **
+ ** @param subbandDedispersion True if using subband dedispersion.
  ** @param ordering The ordering of the data.
  ** @param replacement The replacement strategy for flagged samples.
  ** @param observation The observation object.
@@ -116,6 +120,24 @@ std::string * getTimeDomainSigmaCutOpenCL(const rfiConfig &config, const DataOrd
  */
 template<typename DataType>
 std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const rfiConfig &config, const std::string &dataTypeName, const AstroData::Observation &observation, const float sigmaCut, const unsigned int padding);
+
+/**
+ ** @brief Test the OpenCL code by comparing results with C++ implementation.
+ **
+ ** @param subbandDedispersion True if using subband dedispersion.
+ ** @param config The kernel configuration.
+ ** @param ordering The ordering of the data.
+ ** @param replacement The replacement strategy for flagged samples.
+ ** @param dataTypeName The name of the input data type.
+ ** @param observation The observation object.
+ ** @param time_series The input data.
+ ** @param openCLRunTime The OpenCL run time objects.
+ ** @param clDeviceID The ID of the OpenCL device to use.
+ ** @param sigmaCut The threshold value for the sigma cut.
+ ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ */
+template<typename DataType>
+void testTimeDomainSigmaCut(const bool subbandDedispersion, const bool printResults, const rfiConfig &config, const DataOrdering &ordering, const ReplacementStrategy &replacement, const std::string &dataTypeName, const AstroData::Observation &observation, const std::vector<DataType> &time_series, isa::OpenCL::OpenCLRunTime &openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
 
 } // RFIm
 
@@ -166,7 +188,7 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
 {
     std::string *code = new std::string();
     // Kernel template
-    *code = "__kernel void timeDomainSigmaCut(__global const " + dataTypeName + " * const restrict time_series) {\n"
+    *code = "__kernel void timeDomainSigmaCut(__global " + dataTypeName + " * const restrict time_series) {\n"
     + config.getIntType() + " threshold = 0;\n"
     "float delta = 0.0f;\n"
     "float mean = 0.0f;\n"
@@ -309,4 +331,91 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     code = isa::utils::replace(code, "<%LOCAL_REDUCE%>", localReduce, true);
     code = isa::utils::replace(code, "<%REPLACE%>", replace, true);
     return code;
+}
+
+template<typename DataType>
+void RFIm::testTimeDomainSigmaCut(const bool subbandDedispersion, const bool printResults, const rfiConfig &config, const DataOrdering &ordering, const ReplacementStrategy &replacement, const std::string &dataTypeName, const AstroData::Observation &observation, const std::vector<DataType> &time_series, isa::OpenCL::OpenCLRunTime &openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
+{
+    std::uint64_t wrongSamples = 0;
+    std::vector<DataType> test_time_series, control_time_series;
+    test_time_series = time_series;
+    control_time_series = time_series;
+    cl::Buffer device_time_series;
+    cl::Kernel * kernel = nullptr;
+    // Execute control code
+    timeDomainSigmaCut(subbandDedispersion, ordering, replacement, observation, control_time_series, sigmaCut, padding);
+    // Execute OpenCL code
+    std::string code = getTimeDomainSigmaCutOpenCL<DataType>(config, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
+    try
+    {
+        device_time_series = cl::Buffer(*(openCLRunTime.context), CL_MEM_READ_WRITE, test_time_series.size() * sizeof(DataType), 0, 0);
+    }
+    catch ( const cl::Error & err )
+    {
+        std::cerr << "OpenCL device memory allocation error: " << std::to_string(err.err()) << "." << std::endl;
+        throw err;
+    }
+    try
+    {
+        openCLRunTime.queues->at(clDeviceID)[0].enqueueWriteBuffer(device_time_series, CL_FALSE, 0, test_time_series.size() * sizeof(DataType), reinterpret_cast<void *>(test_time_series.data()));
+    }
+    catch( const cl::Error & err )
+    {
+        std::cerr <<  "OpenCL transfer H2D error: " << std::to_string(err.err()) << "." << std::endl;
+    }
+    try
+    {
+        kernel = isa::OpenCL::compile("timeDomainSigmaCut", code, "-cl-mad-enable -Werror", *(openCLRunTime.context), openCLRunTime.devices->at(clDeviceID));
+    }
+    catch ( const isa::OpenCL::OpenCLError & err )
+    {
+        std::cerr << err.what() << std::endl;
+    }
+    try
+    {
+        cl::NDRange global, local;
+        global = cl::NDRange(config.getNrThreadsD0(), observation.getNrChannels(), observation.getNrBeams());
+        local = cl::NDRange(config.getNrThreadsD0(), 1, 1);
+        kernel->setArg(0, device_time_series);
+        openCLRunTime.queues->at(clDeviceID)[0].enqueueNDRangeKernel(*kernel, cl::NullRange, global, local);
+        openCLRunTime.queues->at(clDeviceID)[0].enqueueReadBuffer(device_time_series, CL_TRUE, 0, test_time_series.size() * sizeof(DataType), reinterpret_cast<void *>(test_time_series.data()));
+    }
+    catch ( const cl::Error & err )
+    {
+        std::cerr << "OpenCL kernel execution error: " << std::to_string(err.err()) << "." << std::endl;
+    }
+    // Compare results
+    for ( unsigned int beam  = 0; beam < observation.getNrBeams(); beam++ )
+    {
+        if ( ordering == FrequencyTime )
+        {
+            for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+            {
+                for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
+                {
+                    if ( !isa::utils::same(test_time_series.at(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)), control_time_series.at(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id))) )
+                    {
+                        wrongSamples++;
+                    }
+                    if ( printResults )
+                    {
+                        std::cout << test_time_series.at(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)) << " " << control_time_series.at(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)) << " ; ";
+                    }
+                }
+                if ( printResults )
+                {
+                    std::cout << std::endl;
+                }
+            }
+        }
+    }
+    // Print test results
+    if ( wrongSamples > 0 )
+    {
+      std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << "%)." << std::endl;
+    }
+    else
+    {
+        std::cout << "TEST PASSED." << std::endl;
+    }
 }
