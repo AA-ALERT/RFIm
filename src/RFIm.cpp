@@ -16,31 +16,31 @@
 
 namespace RFIm
 {
-rfiConfig::rfiConfig() : KernelConf(), subbandDedispersion(false), conditionalReplacement(false) {}
+RFIConfig::RFIConfig() : KernelConf(), subbandDedispersion(false), conditionalReplacement(false) {}
 
-rfiConfig::~rfiConfig() {}
+RFIConfig::~RFIConfig() {}
 
-bool rfiConfig::getSubbandDedispersion() const
+inline bool RFIConfig::getSubbandDedispersion() const
 {
     return subbandDedispersion;
 }
 
-bool rfiConfig::getConditionalReplacement() const
+inline bool RFIConfig::getConditionalReplacement() const
 {
     return conditionalReplacement;
 }
 
-void rfiConfig::setSubbandDedispersion(bool subband)
+inline void RFIConfig::setSubbandDedispersion(const bool subband)
 {
     subbandDedispersion = subband;
 }
 
-void rfiConfig::setConditionalReplacement(bool replacement)
+inline void RFIConfig::setConditionalReplacement(const bool replacement)
 {
     conditionalReplacement = replacement;
 }
 
-std::string rfiConfig::print() const
+inline std::string RFIConfig::print() const
 {
     return std::to_string(subbandDedispersion) + " " + std::to_string(conditionalReplacement) + " " + isa::OpenCL::KernelConf::print();
 }
