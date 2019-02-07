@@ -25,6 +25,7 @@ void usage(const std::string & name);
 int main(int argc, char * argv[])
 {
     bool printResults = false;
+    bool printCode = false;
     unsigned int padding = 0;
     unsigned int clPlatformID = 0;
     unsigned int clDeviceID = 0;
@@ -49,6 +50,7 @@ int main(int argc, char * argv[])
         // General command line arguments
         clPlatformID = arguments.getSwitchArgument<unsigned int>("-opencl_platform");
         clDeviceID = arguments.getSwitchArgument<unsigned int>("-opencl_device");
+        printCode = arguments.getSwitch("-print_code");
         printResults = arguments.getSwitch("-print_results");
         padding = arguments.getSwitchArgument<unsigned int>("-padding");
         observation.setNrBeams(arguments.getSwitchArgument<unsigned int>("-beams"));
@@ -126,7 +128,7 @@ void usage(const std::string & name)
 {
     std::cerr << std::endl;
     std::cerr << name << " [-time_domain_sigma_cut]";
-    std::cerr << " -opencl_platform ... -opencl_device ... [-print_results] -padding ...";
+    std::cerr << " -opencl_platform ... -opencl_device ... [-print_results] [-print_code] -padding ...";
     std::cerr << " -beams ... -channels ...";
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -threads_D0 ... -items_D0 ... [-conditional_replacement] -int_type ... -frequency_time -replace_mean -samples ... -sigma ...";
