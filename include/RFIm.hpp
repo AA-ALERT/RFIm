@@ -139,6 +139,7 @@ std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RF
 /**
  ** @brief Test the OpenCL kernel by comparing results with C++ implementation.
  **
+ ** @param printCode Enable generated code printing.
  ** @param printResults Enable results printing.
  ** @param config The kernel configuration.
  ** @param ordering The ordering of the data.
@@ -152,7 +153,7 @@ std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RF
  ** @param padding The padding, in bytes, necessary to align data to cache lines.
  */
 template<typename DataType>
-void testTimeDomainSigmaCut(const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
+void testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
 
 /**
  ** @brief Tune the OpenCL kernel to find best performing configuration for a certain scenario.
@@ -389,7 +390,7 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
 }
 
 template<typename DataType>
-void RFIm::testTimeDomainSigmaCut(const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
+void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
 {
     std::uint64_t wrongSamples = 0;
     std::vector<DataType> test_time_series, control_time_series;
@@ -425,6 +426,12 @@ void RFIm::testTimeDomainSigmaCut(const bool printResults, const RFIConfig & con
     catch ( const isa::OpenCL::OpenCLError & err )
     {
         std::cerr << err.what() << std::endl;
+    }
+    if ( printCode )
+    {
+        std::cout << std::endl;
+        std::cout << *code << std::endl;
+        std::cout << std::endl;
     }
     try
     {

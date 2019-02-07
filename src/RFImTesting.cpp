@@ -119,7 +119,7 @@ int main(int argc, char * argv[])
     // Execute test
     if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
     {
-        RFIm::testTimeDomainSigmaCut(printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, sigma, padding);
+        RFIm::testTimeDomainSigmaCut(printCode, printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, sigma, padding);
     }
     return 0;
 }
