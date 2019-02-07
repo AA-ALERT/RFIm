@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <RFIm.hpp>
+#include <string>
 
-namespace RFIm
-{
-RFIConfig::RFIConfig() : KernelConf(), subbandDedispersion(false), conditionalReplacement(false) {}
 
-RFIConfig::~RFIConfig() {}
-
-} // RFIm
+#pragma once
+using InputDataType = std::uint8_t;
+const std::string inputDataName("uchar");
