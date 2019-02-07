@@ -535,7 +535,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
         double bandwidth = isa::utils::giga(observation.getNrSynthesizedBeams() * static_cast<uint64_t>(observation.getNrChannels()) * observation.getNrSamplesPerDispersedBatch(subbandDedispersion) * sizeof(DataType) * 2.0);
         cl::Kernel * kernel = nullptr;
         // Generate kernel
-        std::string * code = getTimeDomainSigmaCutOpenCL<DataType>(configuration, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
+        std::string * code = getTimeDomainSigmaCutOpenCL<DataType>(*configuration, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
         if ( initializeDevice )
         {
             isa::OpenCL::initializeOpenCL(clPlatformID, 1, openCLRunTime);
