@@ -426,6 +426,7 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     catch ( const isa::OpenCL::OpenCLError & err )
     {
         std::cerr << err.what() << std::endl;
+        delete code;
     }
     if ( printCode )
     {
@@ -433,6 +434,7 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
         std::cout << *code << std::endl;
         std::cout << std::endl;
     }
+    delete code;
     try
     {
         cl::NDRange global, local;
@@ -445,7 +447,9 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     catch ( const cl::Error & err )
     {
         std::cerr << "OpenCL kernel execution error: " << std::to_string(err.err()) << "." << std::endl;
+        delete kernel;
     }
+    delete kernel;
     // Compare results
     for ( unsigned int beam  = 0; beam < observation.getNrBeams(); beam++ )
     {
@@ -563,7 +567,9 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
         catch ( const isa::OpenCL::OpenCLError & err )
         {
             std::cerr << err.what() << std::endl;
+            delete code;
         }
+        delete code;
         try
         {
             cl::NDRange global, local;
