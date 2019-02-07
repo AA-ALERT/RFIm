@@ -20,7 +20,7 @@
 #include <random>
 #include <cmath>
 
-void usage(std::string name);
+void usage(const std::string & name);
 
 int main(int argc, char * argv[])
 {
@@ -115,7 +115,7 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-void usage(std::string name)
+void usage(const std::string & name)
 {
     std::cerr << std::endl;
     std::cerr << name << " [-time_domain_sigma_cut]";
