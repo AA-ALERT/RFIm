@@ -539,11 +539,11 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
     {
         std::cout << "# nrBeams nrChannels nrSamplesPerDispersedBatch *configuration* GB/s time stdDeviation COV" << std::endl << std::endl;
     }
+    // We know how many time we read the data (2), but not how many elements we write, so we only count the reads
+    // Although this may mean that the computed GB/s metric is lower than reality, the ordering of configurations is not affected
+    double bandwidth = isa::utils::giga(observation.getNrBeams() * static_cast<std::uint64_t>(observation.getNrChannels()) * observation.getNrSamplesPerDispersedBatch(subbandDedispersion) * sizeof(DataType) * 2.0);
     for ( auto configuration = configurations.begin(); configuration != configurations.end(); ++configuration )
     {
-        // We know how many time we read the data (2), but not how many elements we write, so we only count the reads
-        // Although this may mean that the computed GB/s metric is lower than reality, the ordering of configurations is not affected
-        double bandwidth = isa::utils::giga(observation.getNrSynthesizedBeams() * static_cast<std::uint64_t>(observation.getNrChannels()) * observation.getNrSamplesPerDispersedBatch(subbandDedispersion) * sizeof(DataType) * 2.0);
         cl::Kernel * kernel = nullptr;
         // Generate kernel
         std::string * code = getTimeDomainSigmaCutOpenCL<DataType>(*configuration, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
