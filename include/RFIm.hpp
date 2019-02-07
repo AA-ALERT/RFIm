@@ -398,13 +398,14 @@ template<typename DataType>
 void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
 {
     std::uint64_t wrongSamples = 0;
+    std::uint64_t replacedSamples = 0;
     std::vector<DataType> test_time_series, control_time_series;
     test_time_series = time_series;
     control_time_series = time_series;
     cl::Buffer device_time_series;
     cl::Kernel * kernel = nullptr;
     // Execute control code
-    timeDomainSigmaCut(config.getSubbandDedispersion(), ordering, replacement, observation, control_time_series, sigmaCut, padding);
+    replacedSamples = timeDomainSigmaCut(config.getSubbandDedispersion(), ordering, replacement, observation, control_time_series, sigmaCut, padding);
     // Execute OpenCL code
     std::string * code = getTimeDomainSigmaCutOpenCL<DataType>(config, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
     try
