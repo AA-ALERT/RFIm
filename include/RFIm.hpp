@@ -499,9 +499,9 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
     cl::Event clEvent;
     cl::Buffer device_time_series;
     // Generate valid configurations
-    for ( unsigned int threads = parameters.getMinThreads(); threads < parameters.getMaxThreads(); threads *= 2 )
+    for ( unsigned int threads = parameters.getMinThreads(); threads <= parameters.getMaxThreads(); threads *= 2 )
     {
-        for ( unsigned int items = 1; (items * 3) + 8 < parameters.getMaxItems(); items++ )
+        for ( unsigned int items = 1; (items * 3) + 8 <= parameters.getMaxItems(); items++ )
         {
             if ( (threads * items) > observation.getNrSamplesPerDispersedBatch(subbandDedispersion) )
             {
