@@ -36,11 +36,11 @@ add_executable(RFImTuning
   include/configuration.hpp
   ${SNR_HEADER}
 )
-target_include_directories(RFImTtuning PRIVATE include)
+target_include_directories(RFImTuning PRIVATE include)
 target_link_libraries(RFImTuning PRIVATE ${TARGET_LINK_LIBRARIES})
 
 # Install
-install(TARGETS rfim RFImTesting RFImTtuning
+install(TARGETS rfim RFImTesting RFImTuning
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
