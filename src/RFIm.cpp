@@ -20,29 +20,4 @@ RFIConfig::RFIConfig() : KernelConf(), subbandDedispersion(false), conditionalRe
 
 RFIConfig::~RFIConfig() {}
 
-inline bool RFIConfig::getSubbandDedispersion() const
-{
-    return subbandDedispersion;
-}
-
-inline bool RFIConfig::getConditionalReplacement() const
-{
-    return conditionalReplacement;
-}
-
-inline void RFIConfig::setSubbandDedispersion(const bool subband)
-{
-    subbandDedispersion = subband;
-}
-
-inline void RFIConfig::setConditionalReplacement(const bool replacement)
-{
-    conditionalReplacement = replacement;
-}
-
-inline std::string RFIConfig::print() const
-{
-    return std::to_string(subbandDedispersion) + " " + std::to_string(conditionalReplacement) + " " + isa::OpenCL::KernelConf::print();
-}
-
 } // RFIm

@@ -174,6 +174,30 @@ void tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::OpenCL::T
 
 } // RFIm
 
+inline bool RFIm::RFIConfig::getSubbandDedispersion() const
+{
+    return subbandDedispersion;
+}
+
+inline bool RFIm::RFIConfig::getConditionalReplacement() const
+{
+    return conditionalReplacement;
+}
+
+inline void RFIm::RFIConfig::setSubbandDedispersion(const bool subband)
+{
+    subbandDedispersion = subband;
+}
+
+inline void RFIm::RFIConfig::setConditionalReplacement(const bool replacement)
+{
+    conditionalReplacement = replacement;
+}
+
+inline std::string RFIm::RFIConfig::print() const
+{
+    return std::to_string(subbandDedispersion) + " " + std::to_string(conditionalReplacement) + " " + isa::OpenCL::KernelConf::print();
+}
 
 template<typename DataType>
 void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding)
