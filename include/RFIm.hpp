@@ -363,7 +363,6 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
             localReduce.append(*temp);
             delete temp;
         }
-        delete temp;
         if ( config.getConditionalReplacement() )
         {
             temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
