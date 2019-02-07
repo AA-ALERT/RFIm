@@ -24,6 +24,7 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <map>
 
 #pragma once
 
@@ -89,6 +90,16 @@ enum ReplacementStrategy
     ReplaceWithMean,
     ReplaceWithMedian
 };
+
+using RFImConfigurations = std::map<std::string, std::map<unsigned int, std::map<float, RFImConfig *> *> *>;
+
+/**
+ ** @brief Read one RFImConfig from a configuration file.
+ **
+ ** @param 
+ ** @param 
+ */
+void readRFImConfig(RFImConfigurations & configurations, const std::string & filename);
 
 /**
  ** @brief Compute time domain sigma cut.
