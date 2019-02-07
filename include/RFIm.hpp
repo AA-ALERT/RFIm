@@ -492,7 +492,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
 {
     bool initializeDevice = true;
     isa::utils::Timer timer;
-    double bestBandwidth = 0.0;
+    double bestTime = std::numeric_limits<double>::max();
     RFIConfig bestConfig;
     std::vector<RFIConfig> configurations;
     isa::OpenCL::OpenCLRunTime openCLRunTime;
@@ -537,11 +537,8 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
     std::cout << std::fixed << std::endl;
     if ( !parameters.getBestMode() )
     {
-        std::cout << "# nrBeams nrChannels nrSamplesPerDispersedBatch *configuration* GB/s time stdDeviation COV" << std::endl << std::endl;
+        std::cout << "# nrBeams nrChannels nrSamplesPerDispersedBatch *configuration* time stdDeviation COV" << std::endl << std::endl;
     }
-    // We know how many time we read the data (2), but not how many elements we write, so we only count the reads
-    // Although this may mean that the computed GB/s metric is lower than reality, the ordering of configurations is not affected
-    double bandwidth = isa::utils::giga(observation.getNrBeams() * static_cast<std::uint64_t>(observation.getNrChannels()) * observation.getNrSamplesPerDispersedBatch(subbandDedispersion) * sizeof(DataType) * 2.0);
     for ( auto configuration = configurations.begin(); configuration != configurations.end(); ++configuration )
     {
         cl::Kernel * kernel = nullptr;
@@ -607,9 +604,9 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             break;
         }
         delete kernel;
-        if ( (bandwidth / timer.getAverageTime()) > bestBandwidth )
+        if ( timer.getAverageTime() < bestTime )
         {
-            bestBandwidth = bandwidth;
+            bestTime = timer.getAverageTime();
             bestConfig = *configuration;
         }
         if ( !parameters.getBestMode() )
