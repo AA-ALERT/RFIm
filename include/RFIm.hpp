@@ -478,7 +478,8 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     // Print test results
     if ( wrongSamples > 0 )
     {
-      std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) << "%)." << std::endl;
+        std::cout << std::fixed;
+        std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) << "%)." << std::endl;
     }
     else
     {
