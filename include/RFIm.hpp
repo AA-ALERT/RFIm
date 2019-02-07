@@ -101,9 +101,11 @@ enum ReplacementStrategy
  ** @param time_series The input data.
  ** @param sigmaCut The threshold value for the sigma cut.
  ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ **
+ ** @return The number of replaced samples.
  */
 template<typename DataType>
-void timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding);
+std::uint64_t timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding);
 
 /**
  ** @brief Generates the OpenCL code for the time domain sigma cut.
@@ -201,8 +203,9 @@ inline std::string RFIm::RFIConfig::print() const
 }
 
 template<typename DataType>
-void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding)
+std::uint64_t RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding)
 {
+    std::uint64_t replacedSamples = 0;
     for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
     {
         if ( ordering == FrequencyTime )
@@ -219,6 +222,7 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
                     DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
                     if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
                     {
+                        replacedSamples++;
                         if ( replacement == ReplaceWithMean )
                         {
                             time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
@@ -228,6 +232,7 @@ void RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const DataOrdering
             }
         }
     }
+    return replacedSamples;
 }
 
 template<typename DataType>
