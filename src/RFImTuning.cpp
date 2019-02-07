@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
     std::vector<InputDataType> time_series;
     if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
     {
-        time_series.resize(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding));
+        time_series.resize(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding));
     }
     for ( auto sample = time_series.begin(); sample != time_series.end(); ++sample )
     {
