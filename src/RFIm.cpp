@@ -16,8 +16,8 @@
 
 namespace RFIm
 {
-RFIConfig::RFIConfig() : KernelConf(), subbandDedispersion(false), conditionalReplacement(false) {}
+RFImConfig::RFImConfig() : KernelConf(), subbandDedispersion(false), conditionalReplacement(false) {}
 
-RFIConfig::~RFIConfig() {}
+RFImConfig::~RFImConfig() {}
 
 } // RFIm

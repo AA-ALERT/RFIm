@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
     unsigned int clDeviceID = 0;
     float sigma = 0.0f;
     RFIm::RFImKernel kernelType;
-    RFIm::RFIConfig kernelConfig;
+    RFIm::RFImConfig kernelConfig;
     RFIm::DataOrdering dataOrdering;
     RFIm::ReplacementStrategy replacementStrategy;
     AstroData::Observation observation;

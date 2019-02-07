@@ -33,11 +33,11 @@ namespace RFIm
 /**
  ** @brief RFI specific kernel configuration.
  */
-class RFIConfig : public isa::OpenCL::KernelConf
+class RFImConfig : public isa::OpenCL::KernelConf
 {
 public:
-    RFIConfig();
-    ~RFIConfig();
+    RFImConfig();
+    ~RFImConfig();
     /**
      ** @brief Return true if in subbanding mode, false otherwise.
      */
@@ -121,7 +121,7 @@ std::uint64_t timeDomainSigmaCut(const bool subbandDedispersion, const DataOrder
  ** @return String containing the generated code.
  */
 template<typename DataType>
-std::string * getTimeDomainSigmaCutOpenCL(const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
+std::string * getTimeDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
 
 /**
  ** @brief Generates the OpenCL code for the time domain sigma cut.
@@ -136,7 +136,7 @@ std::string * getTimeDomainSigmaCutOpenCL(const RFIConfig & config, const DataOr
  ** @return String containing the generated code.
  */
 template<typename DataType>
-std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFIConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
+std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFImConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
 
 /**
  ** @brief Test the OpenCL kernel by comparing results with C++ implementation.
@@ -155,7 +155,7 @@ std::string * getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RF
  ** @param padding The padding, in bytes, necessary to align data to cache lines.
  */
 template<typename DataType>
-void testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
+void testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
 
 /**
  ** @brief Tune the OpenCL kernel to find best performing configuration for a certain scenario.
@@ -177,27 +177,27 @@ void tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::OpenCL::T
 
 } // RFIm
 
-inline bool RFIm::RFIConfig::getSubbandDedispersion() const
+inline bool RFIm::RFImConfig::getSubbandDedispersion() const
 {
     return subbandDedispersion;
 }
 
-inline bool RFIm::RFIConfig::getConditionalReplacement() const
+inline bool RFIm::RFImConfig::getConditionalReplacement() const
 {
     return conditionalReplacement;
 }
 
-inline void RFIm::RFIConfig::setSubbandDedispersion(const bool subband)
+inline void RFIm::RFImConfig::setSubbandDedispersion(const bool subband)
 {
     subbandDedispersion = subband;
 }
 
-inline void RFIm::RFIConfig::setConditionalReplacement(const bool replacement)
+inline void RFIm::RFImConfig::setConditionalReplacement(const bool replacement)
 {
     conditionalReplacement = replacement;
 }
 
-inline std::string RFIm::RFIConfig::print() const
+inline std::string RFIm::RFImConfig::print() const
 {
     return std::to_string(subbandDedispersion) + " " + std::to_string(conditionalReplacement) + " " + isa::OpenCL::KernelConf::print();
 }
@@ -236,7 +236,7 @@ std::uint64_t RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const Dat
 }
 
 template<typename DataType>
-std::string * RFIm::getTimeDomainSigmaCutOpenCL(const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
+std::string * RFIm::getTimeDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
 {
     if ( (ordering == FrequencyTime) && (replacement == ReplaceWithMean) )
     {
@@ -246,7 +246,7 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL(const RFIConfig & config, const 
 }
 
 template<typename DataType>
-std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFIConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
+std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFImConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
 {
     std::string *code = new std::string();
     // Kernel template
@@ -395,7 +395,7 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
 }
 
 template<typename DataType>
-void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFIConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
+void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults, const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, isa::OpenCL::OpenCLRunTime & openCLRunTime, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding)
 {
     std::uint64_t wrongSamples = 0;
     std::uint64_t replacedSamples = 0;
@@ -499,8 +499,8 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
     bool initializeDevice = true;
     isa::utils::Timer timer;
     double bestTime = std::numeric_limits<double>::max();
-    RFIConfig bestConfig;
-    std::vector<RFIConfig> configurations;
+    RFImConfig bestConfig;
+    std::vector<RFImConfig> configurations;
     isa::OpenCL::OpenCLRunTime openCLRunTime;
     cl::Event clEvent;
     cl::Buffer device_time_series;
@@ -513,7 +513,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             {
                 break;
             }
-            RFIConfig baseConfig, tempConfig;
+            RFImConfig baseConfig, tempConfig;
             baseConfig.setSubbandDedispersion(subbandDedispersion);
             baseConfig.setNrThreadsD0(threads);
             baseConfig.setNrItemsD0(items);
