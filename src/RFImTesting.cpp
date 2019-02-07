@@ -19,6 +19,7 @@
 
 #include <random>
 #include <algorithm>
+#include <cmath>
 
 void usage(std::string name);
 
@@ -101,9 +102,9 @@ int main(int argc, char * argv[])
     // Generate test data
     std::random_device randomDevice;
     std::mt19937 randomGenerator(randomDevice);
-    std::normal_distribution<InputDataType> distribution(42, sigma);
+    std::normal_distribution<double> distribution(42, sigma);
     std::vector<InputDataType> time_series(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding));
-    std::generate(time_series.begin(), time_series.end(), distribution(randomGenerator));
+    std::generate(time_series.begin(), time_series.end(), std::round(distribution(randomGenerator)));
     // Initialize OpenCL
     isa::OpenCL::OpenCLRunTime openCLRunTime;
     isa::OpenCL::initializeOpenCL(clPlatformID, 1, openCLRunTime);
