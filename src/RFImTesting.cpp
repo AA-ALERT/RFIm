@@ -100,7 +100,7 @@ int main(int argc, char * argv[])
     }
     // Generate test data
     std::random_device randomDevice;
-    std::mt19937 randomGenerator(randomDevice);
+    std::mt19937 randomGenerator(randomDevice());
     std::normal_distribution<double> distribution(42, sigma);
     std::vector<InputDataType> time_series(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding));
     for ( auto sample = time_series.begin(); sample != time_series.end(); ++sample )
