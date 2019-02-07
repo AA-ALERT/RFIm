@@ -4,7 +4,7 @@ include(GNUInstallDirs)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++17")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native -mtune=native")
-set(TARGET_LINK_LIBRARIES OpenCL rt)
+set(TARGET_LINK_LIBRARIES rfim isa_utils isa_opencl astrodata OpenCL rt)
 
 set(RFIM_HEADER
     include/RFIm.hpp
@@ -20,3 +20,12 @@ set_target_properties(rfim PROPERTIES
     PUBLIC_HEADER "include/RFIm.hpp"
 )
 target_include_directories(rfim PRIVATE include)
+
+# RFImTesting
+add_executable(RFImTesting
+  src/RFImTesting.cpp
+  include/configuration.hpp
+  ${SNR_HEADER}
+)
+target_include_directories(RFImTesting PRIVATE include)
+target_link_libraries(RFImTesting PRIVATE ${TARGET_LINK_LIBRARIES})
