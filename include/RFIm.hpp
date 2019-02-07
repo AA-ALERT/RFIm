@@ -65,6 +65,14 @@ private:
 };
 
 /**
+ ** @brief The kernel type.
+ */
+enum RFImKernel
+{
+    TimeDomainSigmaCut
+};
+
+/**
  ** @brief Ordering of input/output data.
  */
 enum DataOrdering
