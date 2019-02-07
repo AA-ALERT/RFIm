@@ -132,4 +132,3 @@ void usage(const std::string & name)
     std::cerr << std::endl;
     std::cerr << std::endl;
 }
-}
