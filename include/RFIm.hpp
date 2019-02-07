@@ -296,16 +296,16 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     // Version without boundary checks
     std::string localComputeNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
-    "delta = value - mean_<%ITEM_NUMBER%>;\n"
+    "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
-    "variance_<%ITEM_NUMBER%> += delta * (value - mean_<%ITEM_NUMBER%>);\n";
+    "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n";
     // Version with boundary checks
     std::string localComputeCheckTemplate = "if ( sample_id + <%ITEM_OFFSET%> < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + " ) {\n"
-    "value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
+    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
-    "delta = value - mean_<%ITEM_NUMBER%>;\n"
+    "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
-    "variance_<%ITEM_NUMBER%> += delta * (value - mean_<%ITEM_NUMBER%>);\n"
+    "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n"
     "}\n";
     // In-thread reduction
     std::string localReduceTemplate = "delta = mean_<%ITEM_NUMBER%> - mean_0;\n"
