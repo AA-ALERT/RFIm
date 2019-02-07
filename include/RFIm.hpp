@@ -564,7 +564,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             local = cl::NDRange((*configuration).getNrThreadsD0(), 1, 1);
             kernel->setArg(0, device_time_series);
             // Warm-up run
-            openCLRunTime.queues->at(clDeviceID)[0].enqueueWriteBuffer(device_time_series, CL_FALSE, 0, time_series.size() * sizeof(DataType), reinterpret_cast<void *>(time_series.data()), nullptr, &clEvent);
+            openCLRunTime.queues->at(clDeviceID)[0].enqueueWriteBuffer(device_time_series, CL_FALSE, 0, time_series.size() * sizeof(DataType), reinterpret_cast<const void *>(time_series.data()), nullptr, &clEvent);
             clEvent.wait();
             openCLRunTime.queues->at(clDeviceID)[0].finish();
             openCLRunTime.queues->at(clDeviceID)[0].enqueueNDRangeKernel(*kernel, cl::NullRange, global, local, nullptr, &clEvent);
@@ -572,7 +572,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             // Tuning runs
             for ( unsigned int iteration = 0; iteration < parameters.getNrIterations(); iteration++ )
             {
-                openCLRunTime.queues->at(clDeviceID)[0].enqueueWriteBuffer(device_time_series, CL_FALSE, 0, time_series.size() * sizeof(DataType), reinterpret_cast<void *>(time_series.data()), nullptr, &clEvent);
+                openCLRunTime.queues->at(clDeviceID)[0].enqueueWriteBuffer(device_time_series, CL_FALSE, 0, time_series.size() * sizeof(DataType), reinterpret_cast<const void *>(time_series.data()), nullptr, &clEvent);
                 clEvent.wait();
                 openCLRunTime.queues->at(clDeviceID)[0].finish();
                 timer.start();
