@@ -614,8 +614,6 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             std::cout << observation.getNrSynthesizedBeams() << " " << observation.getNrChannels() << " ";
             std::cout  << observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << " ";
             std::cout << (*configuration).print() << " ";
-            std::cout << std::setprecision(3);
-            std::cout << bandwidth / timer.getAverageTime() << " ";
             std::cout << std::setprecision(6);
             std::cout << timer.getAverageTime() << " " << timer.getStandardDeviation() << " " << timer.getCoefficientOfVariation();
             std::cout  << std::endl;
