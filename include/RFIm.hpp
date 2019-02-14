@@ -25,7 +25,6 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
-#include <set>
 
 #pragma once
 
@@ -105,7 +104,7 @@ void readRFImConfig(RFImConfigurations & configurations, const std::string & fil
 /**
  ** @brief Read the 
  */
-void readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::set<float> &steps);
+void readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::vector<float> &steps);
 
 /**
  ** @brief Compute time domain sigma cut.

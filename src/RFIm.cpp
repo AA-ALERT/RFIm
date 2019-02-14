@@ -105,7 +105,7 @@ void RFIm::readRFImConfig(RFIm::RFImConfigurations & configurations, const std::
     file.close();
 }
 
-void RFIm::readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::set<float> &steps)
+void RFIm::readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::vector<float> &steps)
 {
     std::ifstream input;
     input.open(inputFilename);
