@@ -117,7 +117,7 @@ void RFIm::readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::ve
     {
         float step = 0.0f;
         input >> step;
-        steps.insert(step);
+        steps.push_back(step);
     }
     input.close();
 }
