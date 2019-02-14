@@ -25,6 +25,7 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
+#include <set>
 
 #pragma once
 
@@ -96,10 +97,15 @@ using RFImConfigurations = std::map<std::string, std::map<unsigned int, std::map
 /**
  ** @brief Read one RFImConfig from a configuration file.
  **
- ** @param 
- ** @param 
+ ** @param configurations Where to store all configurations.
+ ** @param filename The file to read the configurations from.
  */
 void readRFImConfig(RFImConfigurations & configurations, const std::string & filename);
+
+/**
+ ** @brief Read the 
+ */
+void readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::set<float> &steps);
 
 /**
  ** @brief Compute time domain sigma cut.

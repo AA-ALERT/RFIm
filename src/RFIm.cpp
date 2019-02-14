@@ -33,7 +33,7 @@ void RFIm::readRFImConfig(RFIm::RFImConfigurations & configurations, const std::
     file.open(filename);
     if ( !file )
     {
-        throw AstroData::FileError("Impossible to open " + filename);
+        throw AstroData::FileError("Impossible to open \"" + filename + "\".");
     }
     while ( !file.eof() )
     {
@@ -103,4 +103,21 @@ void RFIm::readRFImConfig(RFIm::RFImConfigurations & configurations, const std::
         }
     }
     file.close();
+}
+
+void RFIm::readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::set<float> &steps)
+{
+    std::ifstream input;
+    input.open(inputFilename);
+    if ( !input )
+    {
+        throw AstroData::FileError("Impossible to open \"" + inputFilename + "\".");
+    }
+    while ( !input.eof() )
+    {
+        float step = 0.0f;
+        input >> step;
+        steps.insert(step);
+    }
+    input.close();
 }
