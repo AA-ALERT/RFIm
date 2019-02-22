@@ -70,7 +70,8 @@ private:
  */
 enum RFImKernel
 {
-    TimeDomainSigmaCut
+    TimeDomainSigmaCut,
+    FrequencyDomainSigmaCut
 };
 
 /**
