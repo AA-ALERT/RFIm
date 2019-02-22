@@ -209,6 +209,37 @@ void tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::OpenCL::T
 template<typename DataType>
 std::uint64_t frequencyDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding);
 
+/**
+ ** @brief Generates the OpenCL code for the frequency domain sigma cut.
+ **
+ ** @param config The kernel configuration.
+ ** @param ordering The ordering of the data.
+ ** @param replacement The replacement strategy for flagged samples.
+ ** @param dataTypeName The name of the input data type.
+ ** @param observation The observation object.
+ ** @param sigmaCut The threshold value for the sigma cut.
+ ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ **
+ ** @return String containing the generated code.
+ */
+template<typename DataType>
+std::string * getFrequencyDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
+
+/**
+ ** @brief Generates the OpenCL code for the time domain sigma cut.
+ ** This function generates specialized code for the case in which the input is FrequencyTime ordered and flagged samples are replaced with the mean.
+ **
+ ** @param config The kernel configuration.
+ ** @param dataTypeName The name of the input data type.
+ ** @param observation The observation object.
+ ** @param sigmaCut The threshold value for the sigma cut.
+ ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ **
+ ** @return String containing the generated code.
+ */
+template<typename DataType>
+std::string * getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFImConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
+
 } // RFIm
 
 inline bool RFIm::RFImConfig::getSubbandDedispersion() const
@@ -705,4 +736,16 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
         }
     }
     return replacedSamples;
+}
+
+template<typename DataType>
+std::string * RFIm::getFrequencyDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
+{
+
+}
+
+template<typename DataType>
+std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFImConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
+{
+
 }
