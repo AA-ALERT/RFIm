@@ -105,7 +105,7 @@ void readRFImConfig(RFImConfigurations & configurations, const std::string & fil
 /**
  ** @brief Read the 
  */
-void readTimeDomainSigmaCutSteps(const std::string &inputFilename, std::vector<float> &steps);
+void readSigmaSteps(const std::string &inputFilename, std::vector<float> &steps);
 
 /**
  ** @brief Compute time domain sigma cut.
