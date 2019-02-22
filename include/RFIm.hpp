@@ -192,6 +192,23 @@ void testTimeDomainSigmaCut(const bool printCode, const bool printResults, const
 template<typename DataType>
 void tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::OpenCL::TuningParameters & parameters, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const std::vector<DataType> & time_series, const unsigned int clPlatformID, const unsigned int clDeviceID, const float sigmaCut, const unsigned int padding);
 
+/**
+ ** @brief Compute frequency domain sigma cut.
+ ** Not optimized, just for testing purpose.
+ **
+ ** @param subbandDedispersion True if using subband dedispersion.
+ ** @param ordering The ordering of the data.
+ ** @param replacement The replacement strategy for flagged samples.
+ ** @param observation The observation object.
+ ** @param time_series The input data.
+ ** @param sigmaCut The threshold value for the sigma cut.
+ ** @param padding The padding, in bytes, necessary to align data to cache lines.
+ **
+ ** @return The number of replaced samples.
+ */
+template<typename DataType>
+std::uint64_t frequencyDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding);
+
 } // RFIm
 
 inline bool RFIm::RFImConfig::getSubbandDedispersion() const
@@ -655,4 +672,37 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
     {
         std::cout << std::endl;
     }
+}
+
+template<typename DataType>
+std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding)
+{
+    std::uint64_t replacedSamples = 0;
+    for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
+    {
+        if ( ordering == FrequencyTime )
+        {
+            for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
+            {
+                isa::utils::Statistics<DataType> statistics;
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                {
+                    statistics.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
+                }
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                {
+                    DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
+                    if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
+                    {
+                        replacedSamples++;
+                        if ( replacement == ReplaceWithMean )
+                        {
+                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return replacedSamples;
 }
