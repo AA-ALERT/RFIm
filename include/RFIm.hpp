@@ -424,6 +424,14 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     replacedSamples = timeDomainSigmaCut(config.getSubbandDedispersion(), ordering, replacement, observation, control_time_series, sigmaCut, padding);
     // Execute OpenCL code
     std::string * code = getTimeDomainSigmaCutOpenCL<DataType>(config, ordering, replacement, dataTypeName, observation, sigmaCut, padding);
+    if ( printCode )
+    {
+        std::cout << std::endl;
+        std::cout << *code << std::endl;
+        std::cout << std::endl;
+        delete code;
+        return;
+    }
     try
     {
         device_time_series = cl::Buffer(*(openCLRunTime.context), CL_MEM_READ_WRITE, test_time_series.size() * sizeof(DataType), 0, 0);
@@ -449,12 +457,6 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     {
         std::cerr << err.what() << std::endl;
         delete code;
-    }
-    if ( printCode )
-    {
-        std::cout << std::endl;
-        std::cout << *code << std::endl;
-        std::cout << std::endl;
     }
     delete code;
     try
