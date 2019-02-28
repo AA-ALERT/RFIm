@@ -741,7 +741,11 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
 template<typename DataType>
 std::string * RFIm::getFrequencyDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
 {
-
+     if ( (ordering == FrequencyTime) && (replacement == ReplaceWithMean) )
+    {
+        return getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean<DataType>(config, dataTypeName, observation, sigmaCut, padding);
+    }
+    return new std::string();
 }
 
 template<typename DataType>
