@@ -1073,7 +1073,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
         }
         try
         {
-            kernel = isa::OpenCL::compile("timeDomainSigmaCut", *code, "-cl-mad-enable -Werror", *(openCLRunTime.context), openCLRunTime.devices->at(clDeviceID));
+            kernel = isa::OpenCL::compile("frequencyDomainSigmaCut", *code, "-cl-mad-enable -Werror", *(openCLRunTime.context), openCLRunTime.devices->at(clDeviceID));
         }
         catch ( const isa::OpenCL::OpenCLError & err )
         {
