@@ -166,6 +166,7 @@ void usage(const std::string & name)
     std::cerr << " [-time_domain_sigma_cut] [-frequency_domain_sigma_cut]";
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D0 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
+    std::cerr << std::endl;
     std::cerr << "\tFrequency Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D1 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
     std::cerr << std::endl;
