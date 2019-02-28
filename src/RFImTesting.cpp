@@ -150,7 +150,7 @@ int main(int argc, char * argv[])
     {
         RFIm::testTimeDomainSigmaCut(printCode, printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, sigma, padding);
     }
-    else if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
+    else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
         RFIm::testFrequencyDomainSigmaCut(printCode, printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, sigma, padding);
     }
