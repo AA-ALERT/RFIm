@@ -162,7 +162,7 @@ void usage(const std::string & name)
     std::cerr << std::endl;
     std::cerr << name;
     std::cerr << " -opencl_platform <int> -opencl_device <int> [-print_results] [-print_code] -padding <int>";
-    std::cerr << " -beams <int> -channels <int> -sample <int>";
+    std::cerr << " -beams <int> -channels <int> -samples <int>";
     std::cerr << " [-time_domain_sigma_cut] [-frequency_domain_sigma_cut]";
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D0 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
