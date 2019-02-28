@@ -724,15 +724,17 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
         {
             std::cout << observation.getNrBeams() << " " << observation.getNrChannels() << " ";
             std::cout << observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << " ";
+            std::cout.precision(2);
             std::cout << sigmaCut << " ";
             std::cout << (*configuration).print() << " ";
-            std::cout << std::setprecision(6);
+            std::cout.precision(6);
             std::cout << timer.getAverageTime() << " " << timer.getStandardDeviation() << " " << timer.getCoefficientOfVariation();
             std::cout  << std::endl;
         }
     }
     if ( parameters.getBestMode() )
     {
+        std::cout.precision(2);
         std::cout << observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << " " << sigmaCut << " ";
         std::cout << bestConfig.print() << std::endl;
     }
@@ -1126,7 +1128,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
         {
             std::cout << observation.getNrBeams() << " " << observation.getNrChannels() << " ";
             std::cout << observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << " ";
-            std::cout.precision(1);
+            std::cout.precision(2);
             std::cout << sigmaCut << " ";
             std::cout << (*configuration).print() << " ";
             std::cout.precision(6);
@@ -1136,7 +1138,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
     }
     if ( parameters.getBestMode() )
     {
-        std::cout.precision(1);
+        std::cout.precision(2);
         std::cout << observation.getNrSamplesPerDispersedBatch(subbandDedispersion) << " " << sigmaCut << " ";
         std::cout << bestConfig.print() << std::endl;
     }
