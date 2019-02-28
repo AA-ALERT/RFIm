@@ -226,7 +226,7 @@ template<typename DataType>
 std::string * getFrequencyDomainSigmaCutOpenCL(const RFImConfig & config, const DataOrdering & ordering, const ReplacementStrategy & replacement, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding);
 
 /**
- ** @brief Generates the OpenCL code for the time domain sigma cut.
+ ** @brief Generates the OpenCL code for the frequency domain sigma cut.
  ** This function generates specialized code for the case in which the input is FrequencyTime ordered and flagged samples are replaced with the mean.
  **
  ** @param config The kernel configuration.
