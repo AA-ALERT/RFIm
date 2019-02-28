@@ -42,6 +42,10 @@ int main(int argc, char * argv[])
         {
             kernelType = RFIm::RFImKernel::TimeDomainSigmaCut;
         }
+        else if ( arguments.getSwitch("-frequency_domain_sigma_cut") )
+        {
+            kernelType = RFIm::RFImKernel::FrequencyDomainSigmaCut;
+        }
         else
         {
             throw std::exception();
@@ -52,6 +56,15 @@ int main(int argc, char * argv[])
         padding = arguments.getSwitchArgument<unsigned int>("-padding");
         observation.setNrBeams(arguments.getSwitchArgument<unsigned int>("-beams"));
         observation.setFrequencyRange(1, arguments.getSwitchArgument<unsigned int>("-channels"), 0.0f, 0.0f);
+        subbandDedispersion = arguments.getSwitch("-subbanding");
+        if ( subbandDedispersion )
+        {
+            observation.setNrSamplesPerDispersedBatch(arguments.getSwitchArgument<unsigned int>("-samples"), true);
+        }
+        else
+        {
+            observation.setNrSamplesPerDispersedBatch(arguments.getSwitchArgument<unsigned int>("-samples"));
+        }
         // Tuning parameters
         parameters.setBestMode(arguments.getSwitch("-best"));
         parameters.setNrIterations(arguments.getSwitchArgument<unsigned int>("-iterations"));
@@ -61,7 +74,6 @@ int main(int argc, char * argv[])
         // Kernel specific command line arguments
         if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
         {
-            subbandDedispersion = arguments.getSwitch("-subbanding");
             if ( arguments.getSwitch("-frequency_time") )
             {
                 dataOrdering = RFIm::DataOrdering::FrequencyTime;
@@ -77,15 +89,27 @@ int main(int argc, char * argv[])
             else
             {
                 throw std::exception();
-            }
-            if ( subbandDedispersion )
+            }   
+            sigma = arguments.getSwitchArgument<float>("-sigma");
+        }
+        else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
+        {
+            if ( arguments.getSwitch("-frequency_time") )
             {
-                observation.setNrSamplesPerDispersedBatch(arguments.getSwitchArgument<unsigned int>("-samples"), true);
+                dataOrdering = RFIm::DataOrdering::FrequencyTime;
             }
             else
             {
-                observation.setNrSamplesPerDispersedBatch(arguments.getSwitchArgument<unsigned int>("-samples"));
+                throw std::exception();
             }
+            if ( arguments.getSwitch("-replace_mean") )
+            {
+                replacementStrategy = RFIm::ReplacementStrategy::ReplaceWithMean;
+            }
+            else
+            {
+                throw std::exception();
+            }   
             sigma = arguments.getSwitchArgument<float>("-sigma");
         }
     }
@@ -104,7 +128,7 @@ int main(int argc, char * argv[])
     std::mt19937 randomGenerator(randomDevice());
     std::normal_distribution<double> distribution(42, sigma);
     std::vector<InputDataType> time_series;
-    if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
+    if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut || kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
         time_series.resize(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding));
     }
@@ -117,18 +141,25 @@ int main(int argc, char * argv[])
     {
         RFIm::tuneTimeDomainSigmaCut(subbandDedispersion, parameters, dataOrdering, replacementStrategy, inputDataName, observation, time_series, clPlatformID, clDeviceID, sigma, padding);
     }
+    else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
+    {
+        RFIm::tuneFrequencyDomainSigmaCut(subbandDedispersion, parameters, dataOrdering, replacementStrategy, inputDataName, observation, time_series, clPlatformID, clDeviceID, sigma, padding);
+    }
     return 0;
 }
 
 void usage(const std::string & name)
 {
     std::cerr << std::endl;
-    std::cerr << name << " [-time_domain_sigma_cut]";
-    std::cerr << " -opencl_platform ... -opencl_device ... -padding ...";
-    std::cerr << " -beams ... -channels ...";
-    std::cerr << " [-best] -iterations ... -min_threads ... -max_threads ... -max_items ...";
+    std::cerr << name;
+    std::cerr << " -opencl_platform <int> -opencl_device <int> -padding <int>";
+    std::cerr << " [-subbanding] -beams <int> -channels <int> -samples <int>";
+    std::cerr << " [-time_domain_sigma_cut] [-frequency_domain_sigma_cut]";
+    std::cerr << " [-best] -iterations <int> -min_threads <int> -max_threads <int> -max_items <int>";
     std::cerr << std::endl;
-    std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -frequency_time -replace_mean -samples ... -sigma ...";
+    std::cerr << "\tTime Domain Sigma Cut: -frequency_time -replace_mean -sigma <float>";
+    std::cerr << std::endl;
+    std::cerr << "\tFrequency Domain Sigma Cut: -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
     std::cerr << std::endl;
 }
