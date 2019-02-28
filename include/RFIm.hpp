@@ -802,7 +802,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     "return;\n"
     "}\n"
     "// Compute mean and standard deviation\n"
-    "for ( " + config.getIntType() + " channel_id = 1; channel_id < " + std::to_string(observation.getNrChannels()) + "; sample_id += " + std::to_string(config.getNrItemsD1()) + " ) "
+    "for ( " + config.getIntType() + " channel_id = 1; channel_id < " + std::to_string(observation.getNrChannels()) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " ) "
     "{\n"
     "<%LOCAL_COMPUTE%>"
     "}\n"
