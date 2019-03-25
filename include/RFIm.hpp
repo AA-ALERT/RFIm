@@ -103,7 +103,7 @@ using RFImConfigurations = std::map<std::string, std::map<unsigned int, std::map
 void readRFImConfig(RFImConfigurations & configurations, const std::string & filename);
 
 /**
- ** @brief Read the 
+ ** @brief Read the
  */
 void readSigmaSteps(const std::string &inputFilename, std::vector<float> &steps);
 
@@ -701,7 +701,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
                 openCLRunTime.queues->at(clDeviceID)[0].enqueueNDRangeKernel(*kernel, cl::NullRange, global, local, nullptr, &clEvent);
                 clEvent.wait();
                 timer.stop();
-            } 
+            }
         }
         catch ( const cl::Error & err )
         {
@@ -755,19 +755,59 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
             for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
             {
                 isa::utils::Statistics<DataType> statistics;
-                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                isa::utils::Statistics<DataType> statistics_corrected;
+                std::array<isa::utils::Statistics<DataType>, std::ceil(observation.getNrChannels()/32)> local_statistics;
+
+                int i;
+                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    statistics.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
+                    if (channel != 0 && channel % 32 == 0)
+                        i++;
+
+                    local_statistics[i].addElement(
+                        time_series.at(
+                                (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                                (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                                sample_id
+                        )
+                    );
                 }
-                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+
+                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
-                    if ( sample_value > (statistics.getMean() + (sigmaCut * statistics.getStandardDeviation())) )
+                    if (channel != 0 && channel % 32 == 0)
+                        i++;
+
+                    statistics.addElement(
+                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)
+                    );
+
+                    statistics_corrected.addElement(
+                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[i].getMean()
+                    );
+                }
+
+                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                {
+                    if (channel != 0 && channel % 32 == 0)
+                        i++;
+
+                    DataType sample_value = time_series.at(
+                        (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                        (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                        sample_id
+                    );
+
+                    if ( sample_value-local_statistics[i].getMean() > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
                     {
                         replacedSamples++;
                         if ( replacement == ReplaceWithMean )
                         {
-                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                            time_series.at(
+                                (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                                (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
+                                sample_id
+                            ) = statistics.getMean();
                         }
                     }
                 }
@@ -1105,7 +1145,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
                 openCLRunTime.queues->at(clDeviceID)[0].enqueueNDRangeKernel(*kernel, cl::NullRange, global, local, nullptr, &clEvent);
                 clEvent.wait();
                 timer.stop();
-            } 
+            }
         }
         catch ( const cl::Error & err )
         {
