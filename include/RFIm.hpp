@@ -756,10 +756,10 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
             {
                 isa::utils::Statistics<DataType> statistics;
                 isa::utils::Statistics<DataType> statistics_corrected;
-                std::array<isa::utils::Statistics<DataType>, std::ceil(observation.getNrChannels()/32)> local_statistics;
+                isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [(int) std::ceil(observation.getNrChannels()/32)];
 
                 int i;
-                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
                 {
                     if (channel != 0 && channel % 32 == 0)
                         i++;
@@ -773,7 +773,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                     );
                 }
 
-                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
                 {
                     if (channel != 0 && channel % 32 == 0)
                         i++;
@@ -787,7 +787,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                     );
                 }
 
-                for ( i=0, unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
                 {
                     if (channel != 0 && channel % 32 == 0)
                         i++;
