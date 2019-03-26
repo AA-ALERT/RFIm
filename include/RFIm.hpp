@@ -748,6 +748,7 @@ template<typename DataType>
 std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const float sigmaCut, const unsigned int padding)
 {
     std::uint64_t replacedSamples = 0;
+    std::uint64_t chunksize = 32;
     for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
     {
         if ( ordering == FrequencyTime )
@@ -756,15 +757,15 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
             {
                 isa::utils::Statistics<DataType> statistics;
                 isa::utils::Statistics<DataType> statistics_corrected;
-                isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [(int) std::ceil(observation.getNrChannels()/32)];
+                isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [(int) std::ceil(observation.getNrChannels()/chunksize)];
 
-                int i;
-                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
+                int bin;
+                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
                 {
-                    if (channel != 0 && channel % 32 == 0)
-                        i++;
+                    if ( (channel != 0) && ((channel % chunksize) == 0) )
+                        bin++;
 
-                    local_statistics[i].addElement(
+                    local_statistics[bin].addElement(
                         time_series.at(
                                 (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
                                 (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
@@ -773,24 +774,24 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                     );
                 }
 
-                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
+                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
                 {
-                    if (channel != 0 && channel % 32 == 0)
-                        i++;
+                    if ( (channel != 0) && ((channel % chunksize) == 0) )
+                        bin++;
 
                     statistics.addElement(
                         time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)
                     );
 
                     statistics_corrected.addElement(
-                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[i].getMean()
+                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[bin].getMean()
                     );
                 }
 
-                for ( unsigned int channel = 0, i=0; channel < observation.getNrChannels(); channel++ )
+                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
                 {
-                    if (channel != 0 && channel % 32 == 0)
-                        i++;
+                    if ( (channel != 0) && ((channel % chunksize) == 0) )
+                        bin++;
 
                     DataType sample_value = time_series.at(
                         (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
@@ -798,7 +799,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                         sample_id
                     );
 
-                    if ( sample_value-local_statistics[i].getMean() > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
+                    if ( (sample_value-local_statistics[bin].getMean()) > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
                     {
                         replacedSamples++;
                         if ( replacement == ReplaceWithMean )
@@ -834,15 +835,31 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     // Kernel template
     *code = "__kernel void frequencyDomainSigmaCut(__global " + dataTypeName + " * const restrict time_series) {\n"
         "float delta = 0.0f;\n"
+        "float delta_corrected = 0.0f;\n"
         "float sigma_cut = 0.0f;\n"
         + dataTypeName + " sample_value;\n"
-        "<%LOCAL_VARIABLES%>"
+
+        "// FIRST PASS: evaluate bandpass\n"
+        "<%LOCAL_VARIABLES_BANDPASS%>"
         "\n"
         "// Stop unnecessary threads\n"
         "if ( ((get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)) >= " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + " )\n"
         "{\n"
         "return;\n"
         "}\n"
+        "// Compute local means for bandpass removal\n"
+        "for ( " + config.getIntType() + " channel_id = 1; channel_id < " + std::to_string(observation.getNrChannels()) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " ) "
+        "{\n"
+            "<%LOCAL_COMPUTE_BANDPASS%>"
+        "}\n"
+        "// Local reduction for bandpass (if necessary)\n"
+        "<%LOCAL_REDUCE_BANDPASS%>"
+        "barrier(CLK_LOCAL_MEM_FENCE);\n"
+        "\n"
+
+        "// SECOND PASS\n"
+        "<%LOCAL_VARIABLES%>"
+        "\n"
         "// Compute mean and standard deviation\n"
         "for ( " + config.getIntType() + " channel_id = 1; channel_id < " + std::to_string(observation.getNrChannels()) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " ) "
         "{\n"
@@ -850,7 +867,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         "}\n"
         "// Local reduction (if necessary)\n"
         "<%LOCAL_REDUCE%>"
-        "sigma_cut = (" + std::to_string(sigmaCut) + " * native_sqrt(variance_0 * " + std::to_string(1.0f/(observation.getNrChannels() - 1)) + "f));\n"
+        "sigma_cut = (" + std::to_string(sigmaCut) + " * native_sqrt(variance_corrected_0 * " + std::to_string(1.0f/(observation.getNrChannels() - 1)) + "f));\n"
         "// Replace samples over the sigma cut with mean\n"
         "for (" + config.getIntType() + " channel_id = 0; channel_id < " + std::to_string(observation.getNrChannels()) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " ) "
         "{\n"
@@ -859,9 +876,30 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     "}\n";
 
     // Declaration of per thread variables
+    // (BANDPASS) related variables
+    std::string localVariablesBandpassTemplate = "float counter_bandpass_<%ITEM_NUMBER%> = 1.0f;\n"
+    "float mean_bandpass_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%ITEM_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n";
+
+    // General variables
     std::string localVariablesTemplate = "float counter_<%ITEM_NUMBER%> = 1.0f;\n"
-    "float variance_<%ITEM_NUMBER%> = 0.0f;\n"
-    "float mean_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%ITEM_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n";
+    "float mean_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%ITEM_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+    "float variance_corrected_<%ITEM_NUMBER%> = 0.0f;\n"
+    "float mean_corrected_<%ITEM_NUMBER%> = mean_<%ITEM_NUMBER%> - mean_bandpass_<%BIN_NUMBER%>;\n";
+
+    // (BANDPASS) Local compute bandpass
+    // Version without boundary checks
+    std::string localComputeBandpassNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+    "counter_bandpass_<%BIN_NUMBER%> += 1.0f;\n"
+    "delta = sample_value - mean_bandpass_<%BIN_NUMBER%>;\n"
+    "mean_bandpass_<%BIN_NUMBER%> += delta / counter_bandpass_<%BIN_NUMBER%>;\n";
+
+    // Version with boundary checks
+    std::string localComputeBandpassCheckTemplate = "if ( channel_id + <%ITEM_NUMBER%> < " + std::to_string(observation.getNrChannels()) + " ) {\n"
+      "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+      "counter_bandpass_<%ITEM_NUMBER%> += 1.0f;\n"
+      "delta = sample_value - mean_bandpass_<%ITEM_NUMBER%>;\n"
+      "mean_bandpass_<%ITEM_NUMBER%> += delta / counter_bandpass_<%ITEM_NUMBER%>;\n"
+    "}\n";
 
     // Local compute
     // Version without boundary checks
@@ -869,7 +907,9 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
     "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
-    "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n";
+    "delta_corrected = (sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_<%ITEM_NUMBER%>;\n"
+    "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%ITEM_NUMBER%>;\n"
+    "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_bandpass_<%ITEM_NUMBER%>);\n";
 
     // Version with boundary checks
     std::string localComputeCheckTemplate = "if ( channel_id + <%ITEM_NUMBER%> < " + std::to_string(observation.getNrChannels()) + " ) {\n"
@@ -877,35 +917,77 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         "counter_<%ITEM_NUMBER%> += 1.0f;\n"
         "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
         "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
-        "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n"
+        "delta_corrected = (sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_<%ITEM_NUMBER%>;\n"
+        "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%ITEM_NUMBER%>;\n"
+        "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_bandpass_<%ITEM_NUMBER%>);\n"
     "}\n";
 
     // In-thread reduction
+    // (BANDPASS) section
+    std::string localReduceBandpassTemplate = "delta = mean_bandpass_<%ITEM_NUMBER%> - mean_bandpass_<%BIN_NUMBER%>;\n"
+    "counter_bandpass_<%BIN_NUMBER%> += counter_bandpass_<%ITEM_NUMBER%>;\n"
+    "mean_bandpass_<%BIN_NUMBER%> = (((counter_bandpass_<%BIN_NUMBER%> - counter_bandpass_<%ITEM_NUMBER%>) * mean_bandpass_<%BIN_NUMBER%>) + (counter_bandpass_<%ITEM_NUMBER%> * mean_bandpass_<%ITEM_NUMBER%>)) / counter_bandpass_<%BIN_NUMBER%>;\n";
+
+    // General section
     std::string localReduceTemplate = "delta = mean_<%ITEM_NUMBER%> - mean_0;\n"
     "counter_0 += counter_<%ITEM_NUMBER%>;\n"
     "mean_0 = (((counter_0 - counter_<%ITEM_NUMBER%>) * mean_0) + (counter_<%ITEM_NUMBER%> * mean_<%ITEM_NUMBER%>)) / counter_0;\n"
-    "variance_0 += variance_<%ITEM_NUMBER%> + ((delta * delta) * (((counter_0 - counter_<%ITEM_NUMBER%>) * counter_<%ITEM_NUMBER%>) / counter_0));\n";
+    "mean_corrected_0 = (((counter_0 - counter_<%ITEM_NUMBER%>) * mean_corrected_0) + (counter_<%ITEM_NUMBER%> * mean_corrected_<%ITEM_NUMBER%>)) / counter_0;\n"
+    "variance_corrected_0 += variance_corrected_<%ITEM_NUMBER%> + ((delta * delta) * (((counter_0 - counter_<%ITEM_NUMBER%>) * counter_<%ITEM_NUMBER%>) / counter_0));\n";
 
-    std::string replaceConditionTemplate = "if ( time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] > (mean_0 + sigma_cut) ) {\n"
+    // Replace section
+    std::string replaceConditionTemplate = "if ( time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] - mean_bandpass_<%BIN_NUMBER%> > (mean_corrected_0 + sigma_cut) ) {\n"
         "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = mean_0;"
     "}\n";
 
     std::string replaceTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
-    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = (sample_value * (convert_" + dataTypeName + "(sample_value < (mean_0 + sigma_cut)))) + (mean_0 * (convert_" + dataTypeName + "(sample_value > mean_0 + sigma_cut)));\n";
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = (sample_value * (convert_" + dataTypeName + "(sample_value - mean_bandpass_<%BIN_NUMBER%> < (mean_corrected_0 + sigma_cut)))) + (mean_corrected_0 * (convert_" + dataTypeName + "(sample_value - mean_bandpass_<%BIN_NUMBER%> > mean_corrected_0 + sigma_cut)));\n";
     // End of kernel template
 
     // Code generation
     std::string localVariables;
+    std::string localVariablesBandpass;
+    std::string localComputeBandpass;
     std::string localCompute;
     std::string localReduce;
     std::string replace;
-    for ( unsigned int item = 0; item < config.getNrItemsD1(); item++ )
+    unsigned int bin;
+    for ( unsigned int item = 0, bin=0; item < config.getNrItemsD1(); item++ )
     {
+        if ( (item != 0) && ((item % 32) == 0) )
+            bin++;
+
         std::string * temp;
         std::string itemString = std::to_string(item);
+        std::string binString = std::to_string(bin);
+
+        // Local variables bandpass block
+        temp = isa::utils::replace(&localVariablesBandpassTemplate, "<%ITEM_NUMBER%>", itemString);
+        localVariablesBandpass.append(*temp);
+        delete temp;
+
+        // Local variables block
         temp = isa::utils::replace(&localVariablesTemplate, "<%ITEM_NUMBER%>", itemString);
         localVariables.append(*temp);
         delete temp;
+
+        // Local compute bandpass block
+        if ( (observation.getNrChannels() % config.getNrItemsD1()) == 0 )
+        {
+            temp = isa::utils::replace(&localComputeBandpassNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        else
+        {
+            temp = isa::utils::replace(&localComputeBandpassCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+        }
+        if ( item == 0 )
+        {
+            temp = isa::utils::replace(temp, " + 0", std::string(), true);
+        }
+        localComputeBandpass.append(*temp);
+        delete temp;
+
+        // Local compute block
         if ( (observation.getNrChannels() % config.getNrItemsD1()) == 0 )
         {
             temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
@@ -920,19 +1002,35 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         }
         localCompute.append(*temp);
         delete temp;
+
+        // Local reduce block
+        // bandpass
         if ( item > 0 )
         {
-            temp = isa::utils::replace(&localReduceTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(&localReduceBandpassTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
             localReduce.append(*temp);
             delete temp;
         }
+        // general
+        if ( item > 0 )
+        {
+            temp = isa::utils::replace(&localReduceTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+            localReduce.append(*temp);
+            delete temp;
+        }
+
+        // Replace value block
         if ( config.getConditionalReplacement() )
         {
             temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
         }
         else
         {
             temp = isa::utils::replace(&replaceTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
         }
         if ( item == 0 )
         {
@@ -940,7 +1038,9 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         }
         replace.append(*temp);
     }
+    code = isa::utils::replace(code, "<%LOCAL_VARIABLES_BANDPASS%>", localVariablesBandpass, true);
     code = isa::utils::replace(code, "<%LOCAL_VARIABLES%>", localVariables, true);
+    code = isa::utils::replace(code, "<%LOCAL_COMPUTE_BANDPASS%>", localComputeBandpass, true);
     code = isa::utils::replace(code, "<%LOCAL_COMPUTE%>", localCompute, true);
     code = isa::utils::replace(code, "<%LOCAL_REDUCE%>", localReduce, true);
     code = isa::utils::replace(code, "<%REPLACE%>", replace, true);
