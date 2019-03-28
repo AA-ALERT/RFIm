@@ -832,6 +832,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL(const RFImConfig & config, 
 template<typename DataType>
 std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(const RFImConfig & config, const std::string & dataTypeName, const AstroData::Observation & observation, const float sigmaCut, const unsigned int padding)
 {
+    std::uint64_t chunksize = 32;
     std::string *code = new std::string();
     // Kernel template
     *code = "__kernel void frequencyDomainSigmaCut(__global " + dataTypeName + " * const restrict time_series) {\n"
@@ -849,10 +850,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         "return;\n"
         "}\n"
         "// Compute local means for bandpass removal\n"
-        "for ( " + config.getIntType() + " channel_id = 1; channel_id < " + std::to_string(observation.getNrChannels()) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " ) "
-        "{\n"
-            "<%LOCAL_COMPUTE_BANDPASS%>"
-        "}\n"
+        "<%LOCAL_COMPUTE_BANDPASS%>"
         "// Local reduction for bandpass (if necessary)\n"
         "<%LOCAL_REDUCE_BANDPASS%>"
         "barrier(CLK_LOCAL_MEM_FENCE);\n"
@@ -878,8 +876,8 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
 
     // Declaration of per thread variables
     // (BANDPASS) related variables
-    std::string localVariablesBandpassTemplate = "float counter_bandpass_<%ITEM_NUMBER%> = 1.0f;\n"
-    "float mean_bandpass_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%ITEM_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n";
+    std::string localVariablesBandpassTemplate = "float counter_bandpass_<%CHANNEL_NUMBER%> = 1.0f;\n"
+    "float mean_bandpass_<%CHANNEL_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%CHANNEL_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n";
 
     // General variables
     std::string localVariablesTemplate = "float counter_<%ITEM_NUMBER%> = 1.0f;\n"
@@ -889,17 +887,17 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
 
     // (BANDPASS) Local compute bandpass
     // Version without boundary checks
-    std::string localComputeBandpassNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
-    "counter_bandpass_<%ITEM_NUMBER%> += 1.0f;\n"
-    "delta = sample_value - mean_bandpass_<%ITEM_NUMBER%>;\n"
-    "mean_bandpass_<%ITEM_NUMBER%> += delta / counter_bandpass_<%ITEM_NUMBER%>;\n";
+    std::string localComputeBandpassNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%CHANNEL_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+    "counter_bandpass_<%CHANNEL_NUMBER%> += 1.0f;\n"
+    "delta = sample_value - mean_bandpass_<%CHANNEL_NUMBER%>;\n"
+    "mean_bandpass_<%CHANNEL_NUMBER%> += delta / counter_bandpass_<%CHANNEL_NUMBER%>;\n";
 
     // Version with boundary checks
     std::string localComputeBandpassCheckTemplate = "if ( channel_id + <%ITEM_NUMBER%> < " + std::to_string(observation.getNrChannels()) + " ) {\n"
-      "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
-      "counter_bandpass_<%ITEM_NUMBER%> += 1.0f;\n"
-      "delta = sample_value - mean_bandpass_<%ITEM_NUMBER%>;\n"
-      "mean_bandpass_<%ITEM_NUMBER%> += delta / counter_bandpass_<%ITEM_NUMBER%>;\n"
+      "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (<%CHANNEL_NUMBER%> * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+      "counter_bandpass_<%CHANNEL_NUMBER%> += 1.0f;\n"
+      "delta = sample_value - mean_bandpass_<%CHANNEL_NUMBER%>;\n"
+      "mean_bandpass_<%CHANNEL_NUMBER%> += delta / counter_bandpass_<%CHANNEL_NUMBER%>;\n"
     "}\n";
 
     // Local compute
@@ -909,8 +907,8 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
     "delta_corrected = (sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_<%ITEM_NUMBER%>;\n"
-    "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%ITEM_NUMBER%>;\n"
-    "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_bandpass_<%ITEM_NUMBER%>);\n";
+    "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%BIN_NUMBER%>;\n"
+    "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_corrected_<%ITEM_NUMBER%>);\n";
 
     // Version with boundary checks
     std::string localComputeCheckTemplate = "if ( channel_id + <%ITEM_NUMBER%> < " + std::to_string(observation.getNrChannels()) + " ) {\n"
@@ -919,15 +917,15 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
         "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
         "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
         "delta_corrected = (sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_<%ITEM_NUMBER%>;\n"
-        "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%ITEM_NUMBER%>;\n"
-        "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_bandpass_<%ITEM_NUMBER%>);\n"
+        "mean_corrected_<%ITEM_NUMBER%> += delta_corrected / counter_bandpass_<%BIN_NUMBER%>;\n"
+        "variance_corrected_<%ITEM_NUMBER%> += delta_corrected * ((sample_value - mean_bandpass_<%BIN_NUMBER%>) - mean_corrected_<%ITEM_NUMBER%>);\n"
     "}\n";
 
     // In-thread reduction
     // (BANDPASS) section
-    std::string localReduceBandpassTemplate = "delta = mean_bandpass_<%ITEM_NUMBER%> - mean_bandpass_<%BIN_NUMBER%>;\n"
-    "counter_bandpass_<%BIN_NUMBER%> += counter_bandpass_<%ITEM_NUMBER%>;\n"
-    "mean_bandpass_<%BIN_NUMBER%> = (((counter_bandpass_<%BIN_NUMBER%> - counter_bandpass_<%ITEM_NUMBER%>) * mean_bandpass_<%BIN_NUMBER%>) + (counter_bandpass_<%ITEM_NUMBER%> * mean_bandpass_<%ITEM_NUMBER%>)) / counter_bandpass_<%BIN_NUMBER%>;\n";
+    std::string localReduceBandpassTemplate = "delta = mean_bandpass_<%CHANNEL_NUMBER%> - mean_bandpass_<%BIN_NUMBER%>;\n"
+    "counter_bandpass_<%BIN_NUMBER%> += counter_bandpass_<%CHANNEL_NUMBER%>;\n"
+    "mean_bandpass_<%BIN_NUMBER%> = (((counter_bandpass_<%BIN_NUMBER%> - counter_bandpass_<%CHANNEL_NUMBER%>) * mean_bandpass_<%BIN_NUMBER%>) + (counter_bandpass_<%CHANNEL_NUMBER%> * mean_bandpass_<%CHANNEL_NUMBER%>)) / counter_bandpass_<%BIN_NUMBER%>;\n";
 
     // General section
     std::string localReduceTemplate = "delta = mean_<%ITEM_NUMBER%> - mean_0;\n"
@@ -946,102 +944,122 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     // End of kernel template
 
     // Code generation
-    std::string localVariables;
     std::string localVariablesBandpass;
+    std::string localVariables;
     std::string localComputeBandpass;
     std::string localCompute;
     std::string localReduceBandpass;
     std::string localReduce;
     std::string replace;
-    unsigned int bin;
-    for ( unsigned int item = 0, bin=0; item < config.getNrItemsD1(); item++ )
+    unsigned int bin=0;
+
+    for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
     {
-        if ( (item != 0) && ((item % 32) == 0) )
-            bin++;
+      std::string * temp;
 
-        std::string * temp;
-        std::string itemString = std::to_string(item);
-        std::string binString = std::to_string(bin);
+      if ( (channel != 0) && ((channel % chunksize) == 0) )
+      {
+          bin += chunksize;
+      }
+      std::string channelString = std::to_string(channel);
+      std::string binString = std::to_string(bin);
 
-        // Local variables bandpass block
-        temp = isa::utils::replace(&localVariablesBandpassTemplate, "<%ITEM_NUMBER%>", itemString);
-        localVariablesBandpass.append(*temp);
-        delete temp;
+      unsigned int item;
+      bool use_item = false;
+      std::string itemString;
+      if ( channel < config.getNrItemsD1() )
+      {
+        item = channel;
+        itemString = std::to_string(item);
+        use_item = true;
+      }
 
-        // Local variables block
-        temp = isa::utils::replace(&localVariablesTemplate, "<%ITEM_NUMBER%>", itemString);
-        temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+      // Local variables bandpass block
+      temp = isa::utils::replace(&localVariablesBandpassTemplate, "<%CHANNEL_NUMBER%>", channelString);
+      localVariablesBandpass.append(*temp);
+      delete temp;
+
+      // Local variables block
+      if (use_item)
+      {
+        temp = isa::utils::replace(&localVariablesTemplate, "<%BIN_NUMBER%>", binString);
+        temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         localVariables.append(*temp);
         delete temp;
+      }
 
-        // Local compute bandpass block
+      // Local compute bandpass block
+      if ( (observation.getNrChannels() % config.getNrItemsD1()) == 0 )
+      {
+          temp = isa::utils::replace(&localComputeBandpassNoCheckTemplate, "<%CHANNEL_NUMBER%>", channelString);
+      }
+      else
+      {
+          temp = isa::utils::replace(&localComputeBandpassCheckTemplate, "<%CHANNEL_NUMBER%>", channelString);
+      }
+      localComputeBandpass.append(*temp);
+      delete temp;
+
+      // Local compute block
+      if (use_item)
+      {
         if ( (observation.getNrChannels() % config.getNrItemsD1()) == 0 )
         {
-            temp = isa::utils::replace(&localComputeBandpassNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%BIN_NUMBER%>", binString);
+            temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         }
         else
         {
-            temp = isa::utils::replace(&localComputeBandpassCheckTemplate, "<%ITEM_NUMBER%>", itemString);
-        }
-        if ( item == 0 )
-        {
-            temp = isa::utils::replace(temp, " + 0", std::string(), true);
-        }
-        localComputeBandpass.append(*temp);
-        delete temp;
-
-        // Local compute block
-        if ( (observation.getNrChannels() % config.getNrItemsD1()) == 0 )
-        {
-            temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
-        }
-        else
-        {
-            temp = isa::utils::replace(&localComputeCheckTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+            temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%BIN_NUMBER%>", binString);
+            temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         }
         if ( item == 0 )
         {
             temp = isa::utils::replace(temp, " + 0", std::string(), true);
         }
         localCompute.append(*temp);
-        delete temp;
+      }
 
-        // Local reduce block
-        // bandpass
-        if ( item > 0 )
-        {
-            temp = isa::utils::replace(&localReduceBandpassTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
-            localReduceBandpass.append(*temp);
-            delete temp;
-        }
-        // general
+      // Local reduce block
+      // bandpass
+      if (channel % chunksize != 0 )
+      {
+        temp = isa::utils::replace(&localReduceBandpassTemplate, "<%CHANNEL_NUMBER%>", channelString);
+        temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+        localReduceBandpass.append(*temp);
+        delete temp;
+      }
+      // general
+      if (use_item)
+      {
         if ( item > 0 )
         {
             temp = isa::utils::replace(&localReduceTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
             localReduce.append(*temp);
             delete temp;
         }
+      }
 
-        // Replace value block
+      // Replace value block
+      if (use_item)
+      {
         if ( config.getConditionalReplacement() )
         {
-            temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+            temp = isa::utils::replace(&replaceConditionTemplate, "<%BIN_NUMBER%>", binString);
+            temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         }
         else
         {
-            temp = isa::utils::replace(&replaceTemplate, "<%ITEM_NUMBER%>", itemString);
-            temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+            temp = isa::utils::replace(&replaceTemplate, "<%BIN_NUMBER%>", binString);
+            temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         }
         if ( item == 0 )
         {
             temp = isa::utils::replace(temp, " + 0", std::string(), true);
         }
         replace.append(*temp);
+        delete temp;
+      }
     }
     code = isa::utils::replace(code, "<%LOCAL_VARIABLES_BANDPASS%>", localVariablesBandpass, true);
     code = isa::utils::replace(code, "<%LOCAL_VARIABLES%>", localVariables, true);
