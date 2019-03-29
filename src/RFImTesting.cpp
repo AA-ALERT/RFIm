@@ -29,6 +29,7 @@ int main(int argc, char * argv[])
     unsigned int padding = 0;
     unsigned int clPlatformID = 0;
     unsigned int clDeviceID = 0;
+    unsigned int nrBins=0;
     float sigma = 0.0f;
     RFIm::RFImKernel kernelType;
     RFIm::RFImConfig kernelConfig;
@@ -92,6 +93,8 @@ int main(int argc, char * argv[])
             kernelConfig.setNrItemsD1(arguments.getSwitchArgument<unsigned int>("-items_D1"));
             kernelConfig.setConditionalReplacement(arguments.getSwitch("-conditional_replacement"));
             kernelConfig.setIntType(arguments.getSwitchArgument<unsigned int>("-int_type"));
+            nrBins = arguments.getSwitchArgument<unsigned int>("-nr_bins");
+
             if ( arguments.getSwitch("-frequency_time") )
             {
                 dataOrdering = RFIm::DataOrdering::FrequencyTime;
@@ -152,7 +155,7 @@ int main(int argc, char * argv[])
     }
     else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
-        RFIm::testFrequencyDomainSigmaCut(printCode, printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, sigma, padding);
+        RFIm::testFrequencyDomainSigmaCut(printCode, printResults, kernelConfig, dataOrdering, replacementStrategy, inputDataName, observation, time_series, openCLRunTime, clDeviceID, nrBins, sigma, padding);
     }
     return 0;
 }
@@ -167,7 +170,7 @@ void usage(const std::string & name)
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D0 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
-    std::cerr << "\tFrequency Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D1 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
+    std::cerr << "\tFrequency Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D1 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -nr_bins <int> -sigma <float>";
     std::cerr << std::endl;
     std::cerr << std::endl;
 }
