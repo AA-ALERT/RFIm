@@ -28,6 +28,7 @@ int main(int argc, char * argv[])
     unsigned int padding = 0;
     unsigned int clPlatformID = 0;
     unsigned int clDeviceID = 0;
+    unsigned int nrBins=0;
     float sigma = 0.0f;
     RFIm::RFImKernel kernelType;
     RFIm::DataOrdering dataOrdering;
@@ -89,11 +90,12 @@ int main(int argc, char * argv[])
             else
             {
                 throw std::exception();
-            }   
+            }
             sigma = arguments.getSwitchArgument<float>("-sigma");
         }
         else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
         {
+            nrBins = arguments.getSwitchArgument<unsigned int>("-nr_bins");
             if ( arguments.getSwitch("-frequency_time") )
             {
                 dataOrdering = RFIm::DataOrdering::FrequencyTime;
@@ -109,7 +111,7 @@ int main(int argc, char * argv[])
             else
             {
                 throw std::exception();
-            }   
+            }
             sigma = arguments.getSwitchArgument<float>("-sigma");
         }
     }
@@ -143,7 +145,7 @@ int main(int argc, char * argv[])
     }
     else if ( kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
-        RFIm::tuneFrequencyDomainSigmaCut(subbandDedispersion, parameters, dataOrdering, replacementStrategy, inputDataName, observation, time_series, clPlatformID, clDeviceID, sigma, padding);
+        RFIm::tuneFrequencyDomainSigmaCut(subbandDedispersion, parameters, dataOrdering, replacementStrategy, inputDataName, observation, time_series, clPlatformID, clDeviceID, nrBins, sigma, padding);
     }
     return 0;
 }
@@ -159,7 +161,7 @@ void usage(const std::string & name)
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
-    std::cerr << "\tFrequency Domain Sigma Cut: -frequency_time -replace_mean -sigma <float>";
+    std::cerr << "\tFrequency Domain Sigma Cut: -frequency_time -replace_mean -nr_bins <int> -sigma <float>";
     std::cerr << std::endl;
     std::cerr << std::endl;
 }
