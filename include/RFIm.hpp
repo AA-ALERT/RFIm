@@ -595,7 +595,7 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     if ( wrongSamples > 0 )
     {
         std::cout << std::fixed;
-        std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) << "%)." << std::endl;
+        std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / (static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) << "%)." << std::endl;
     }
     else
     {
@@ -910,8 +910,8 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     // Replace without boundary checks
     std::string replaceTemplate = "for ( " + config.getIntType() + " channel_id = <%BIN_NUMBER%> * " + std::to_string(binSize) + "; channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id++ )\n"
     "{\n"
-    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] - mean_bin_<%BIN_NUMBER%>;\n"
-    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = (sample_value * (convert_" + dataTypeName + "(sample_value < (mean_0 + sigma_cut)))) + (mean_bin_<%BIN_NUMBER%> * (convert_" + dataTypeName + "(sample_value > mean_0 + sigma_cut)));\n"
+    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = ((sample_value) * (convert_" + dataTypeName + "((sample_value - mean_bin_<%BIN_NUMBER%>) <= (mean_0 + sigma_cut)))) + (mean_bin_<%BIN_NUMBER%> * (convert_" + dataTypeName + "((sample_value - mean_bin_<%BIN_NUMBER%>) > mean_0 + sigma_cut)));\n"
     "}\n";
     // End of kernel template
     // Code generation
@@ -1082,7 +1082,7 @@ void RFIm::testFrequencyDomainSigmaCut(const bool printCode, const bool printRes
     if ( wrongSamples > 0 )
     {
         std::cout << std::fixed;
-        std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) << "%)." << std::endl;
+        std::cout << "Wrong samples: " << wrongSamples << " (" << (wrongSamples * 100.0) / (static_cast<std::uint64_t>(observation.getNrBeams()) * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) << "%)." << std::endl;
     }
     else
     {
