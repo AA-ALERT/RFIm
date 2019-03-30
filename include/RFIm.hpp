@@ -759,7 +759,6 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
         {
             for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
             {
-                isa::utils::Statistics<DataType> statistics;
                 isa::utils::Statistics<DataType> statistics_corrected;
                 isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [(int) std::ceil(observation.getNrChannels()/nrBins)];
 
@@ -782,10 +781,6 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                 {
                     if ( (channel != 0) && ((channel % nrBins) == 0) )
                         bin++;
-
-                    statistics.addElement(
-                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id)
-                    );
 
                     statistics_corrected.addElement(
                         time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[bin].getMean()
