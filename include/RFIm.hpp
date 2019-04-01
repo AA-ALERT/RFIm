@@ -753,6 +753,7 @@ template<typename DataType>
 std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, const DataOrdering & ordering, const ReplacementStrategy & replacement, const AstroData::Observation & observation, std::vector<DataType> & time_series, const unsigned int nrBins, const float sigmaCut, const unsigned int padding)
 {
     std::uint64_t replacedSamples = 0;
+    unsigned int nrChannelsPerBin = static_cast<unsigned int>(std::ceil(observation.getNrChannels() / nrBins));
     for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
     {
         if ( ordering == FrequencyTime )
@@ -760,57 +761,37 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
             for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
             {
                 isa::utils::Statistics<DataType> statistics_corrected;
-                isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [(int) std::ceil(observation.getNrChannels()/nrBins)];
-
-                int bin;
-                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
+                isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [nrBins];
+                for ( unsigned int bin = 0; bin < nrBins; bin++ )
                 {
-                    if ( (channel != 0) && ((channel % nrBins) == 0) )
-                        bin++;
-
-                    local_statistics[bin].addElement(
-                        time_series.at(
-                                (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                                (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                                sample_id
-                        )
-                    );
-                }
-
-                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
-                {
-                    if ( (channel != 0) && ((channel % nrBins) == 0) )
-                        bin++;
-
-                    statistics_corrected.addElement(
-                        time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[bin].getMean()
-                    );
-                }
-
-                for ( unsigned int channel = 0, bin=0; channel < observation.getNrChannels(); channel++ )
-                {
-                    if ( (channel != 0) && ((channel % nrBins) == 0) )
-                        bin++;
-
-                    DataType sample_value = time_series.at(
-                        (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                        (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                        sample_id
-                    );
-
-                    if ( (sample_value-local_statistics[bin].getMean()) > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
+                    // Compute the statistics for a bin
+                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
                     {
-                        replacedSamples++;
-                        if ( replacement == ReplaceWithMean )
+                        local_statistics[bin].addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
+                    }
+                    // Compute the global statistics subtracting to each channel the mean of the bin it is part of
+                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
+                    {
+                        statistics_corrected.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[bin].getMean());
+                    }
+                }
+                // Flag and replace
+                for ( unsigned int bin = 0; bin < nrBins; bin++ )
+                {
+                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
+                    {
+                        DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
+                        if ( (sample_value - local_statistics[bin].getMean()) > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
                         {
-                            time_series.at(
-                                (beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                                (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) +
-                                sample_id
-                            ) = local_statistics[bin].getMean();
+                            replacedSamples++;
+                            if ( replacement == ReplaceWithMean )
+                            {
+                                time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = local_statistics[bin].getMean();
+                            }
                         }
                     }
                 }
+                delete [] local_statistics;
             }
         }
     }
