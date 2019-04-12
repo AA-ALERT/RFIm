@@ -740,6 +740,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             std::cout << timer.getAverageTime() << " " << timer.getStandardDeviation() << " " << timer.getCoefficientOfVariation();
             std::cout  << std::endl;
         }
+        timer.reset();
     }
     if ( parameters.getBestMode() )
     {
@@ -1207,6 +1208,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
             std::cout << timer.getAverageTime() << " " << timer.getStandardDeviation() << " " << timer.getCoefficientOfVariation();
             std::cout  << std::endl;
         }
+        timer.reset();
     }
     if ( parameters.getBestMode() )
     {
