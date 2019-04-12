@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['readrfimconfig',['readRFImConfig',['../RFIm_8hpp.html#abae105d1625c09a1870e384c70abf2a6',1,'RFIm']]],
-  ['readsigmasteps',['readSigmaSteps',['../RFIm_8hpp.html#ac4a848dcecbc7acaa3795d74267e234d',1,'RFIm']]]
+  ['main',['main',['../RFImTesting_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;RFImTesting.cpp'],['../RFImTuning_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;RFImTuning.cpp']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['print',['print',['../classRFIm_1_1RFImConfig.html#a824b2b773121f11c35099c252d2d6ea1',1,'RFIm::RFImConfig']]]
+  ['inputdataname',['inputDataName',['../configuration_8hpp.html#a62cabe5b7f246e542247eb750ff68bc0',1,'configuration.hpp']]],
+  ['inputdatatype',['InputDataType',['../configuration_8hpp.html#a40e95cb91d45b0d70d29e94808aa5780',1,'configuration.hpp']]]
 ];
