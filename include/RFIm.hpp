@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ ** @file RFIm.hpp
+ */
+
 #include <OpenCLTypes.hpp>
 #include <Kernel.hpp>
 #include <InitializeOpenCL.hpp>
@@ -1083,6 +1087,10 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
         for ( unsigned int items = 1; (items * 3) + 3 + nrBins <= parameters.getMaxItems(); items++ )
         {
             if ( threads > observation.getNrSamplesPerDispersedBatch(subbandDedispersion) )
+            {
+                break;
+            }
+            if ( items > (observation.getNrChannels() / nrBins) )
             {
                 break;
             }
