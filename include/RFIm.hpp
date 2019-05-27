@@ -781,18 +781,15 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                     }
                 }
                 // Flag and replace
-                for ( unsigned int bin = 0; bin < nrBins; bin++ )
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
+                    DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
+                    if ( std::fabs(sample_value - statistics_corrected.getMean()) > (sigmaCut * statistics_corrected.getStandardDeviation()) )
                     {
-                        DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
-                        if ( (sample_value - local_statistics[bin].getMean()) > (statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation())) )
+                        replacedSamples++;
+                        if ( replacement == ReplaceWithMean )
                         {
-                            replacedSamples++;
-                            if ( replacement == ReplaceWithMean )
-                            {
-                                time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = local_statistics[bin].getMean();
-                            }
+                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics_corrected.getMean();
                         }
                     }
                 }
