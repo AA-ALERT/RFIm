@@ -586,7 +586,7 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
             {
                 for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()); sample_id++ )
                 {
-                    if ( !isa::utils::same(test_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), control_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), 1.0) )
+                    if ( !isa::utils::same<double>(test_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), control_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), 1.0) )
                     {
                         wrongSamples++;
                     }
@@ -1052,7 +1052,7 @@ void RFIm::testFrequencyDomainSigmaCut(const bool printCode, const bool printRes
             {
                 for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()); sample_id++ )
                 {
-                    if ( !isa::utils::same(test_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), control_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), 1.0) )
+                    if ( !isa::utils::same<double>(test_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), control_time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + sample_id), 1.0) )
                     {
                         wrongSamples++;
                     }
