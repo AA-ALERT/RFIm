@@ -145,6 +145,21 @@ int main(int argc, char * argv[])
     {
         *sample = static_cast<InputDataType>(distribution(randomGenerator));
     }
+    if ( printResults )
+    {
+        for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
+        {
+            for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+            {
+                for ( unsigned int sample = 0; sample < observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion()); sample++ )
+                {
+                    std::cout << time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding)) + (channel * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding)) + sample) << " ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    }
     // Initialize OpenCL
     isa::OpenCL::OpenCLRunTime openCLRunTime;
     isa::OpenCL::initializeOpenCL(clPlatformID, 1, openCLRunTime);
