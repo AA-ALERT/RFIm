@@ -139,7 +139,10 @@ int main(int argc, char * argv[])
     std::vector<InputDataType> time_series;
     if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut || kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
-        time_series.resize(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding));
+        if ( dataOrdering == RFIm::DataOrdering::FrequencyTime )
+        {
+            time_series.resize(observation.getNrBeams() * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding));
+        }
     }
     for ( auto sample = time_series.begin(); sample != time_series.end(); ++sample )
     {
@@ -149,13 +152,16 @@ int main(int argc, char * argv[])
     {
         for ( unsigned int beam = 0; beam < observation.getNrBeams(); beam++ )
         {
-            for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+            if ( dataOrdering == RFIm::DataOrdering::FrequencyTime )
             {
-                for ( unsigned int sample = 0; sample < observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion()); sample++ )
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    std::cout << static_cast<double>(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + (channel * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + sample)) << " ";
+                    for ( unsigned int sample = 0; sample < observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion()); sample++ )
+                    {
+                        std::cout << static_cast<double>(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + (channel * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + sample)) << " ";
+                    }
+                    std::cout << std::endl;
                 }
-                std::cout << std::endl;
             }
             std::cout << std::endl;
         }
