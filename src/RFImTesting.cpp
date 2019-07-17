@@ -135,7 +135,7 @@ int main(int argc, char * argv[])
     // Generate test data
     std::random_device randomDevice;
     std::mt19937 randomGenerator(randomDevice());
-    std::normal_distribution<double> distribution(42, sigma);
+    std::normal_distribution<double> distribution(42, 4.0);
     std::vector<InputDataType> time_series;
     if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut || kernelType == RFIm::RFImKernel::FrequencyDomainSigmaCut )
     {
