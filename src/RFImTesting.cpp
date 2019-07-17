@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
             {
                 for ( unsigned int sample = 0; sample < observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion()); sample++ )
                 {
-                    std::cout << static_cast<float>(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + (channel * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + sample)) << " ";
+                    std::cout << static_cast<double>(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + (channel * observation.getNrSamplesPerDispersedBatch(kernelConfig.getSubbandDedispersion(), padding / sizeof(InputDataType))) + sample)) << " ";
                 }
                 std::cout << std::endl;
             }
