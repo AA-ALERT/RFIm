@@ -336,7 +336,7 @@ std::uint64_t RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const Dat
                         replacedSamples++;
                         if ( replacement == ReplaceWithMean )
                         {
-                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = statistics.getMean();
+                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = static_cast<DataType>(statistics.getMean());
                         }
                     }
                 }
@@ -789,7 +789,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                         replacedSamples++;
                         if ( replacement == ReplaceWithMean )
                         {
-                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = local_statistics[channel / nrChannelsPerBin].getMean();
+                            time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) = static_cast<DataType>(local_statistics[channel / nrChannelsPerBin].getMean());
                         }
                     }
                 }
