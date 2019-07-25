@@ -23,6 +23,7 @@
 #include <utils.hpp>
 #include <Statistics.hpp>
 #include <Timer.hpp>
+#include <typeinfo>
 
 #include <string>
 #include <vector>
