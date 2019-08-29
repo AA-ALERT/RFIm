@@ -775,19 +775,19 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
             {
                 isa::utils::Statistics<DataType> statistics_corrected;
                 isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [nrBins];
-                for ( unsigned int bin = 0; bin < nrBins; bin++ )
+
+                // Compute the statistics for a bin
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    // Compute the statistics for a bin
-                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
-                    {
-                        local_statistics[bin].addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
-                    }
-                    // Compute the global statistics subtracting to each channel the mean of the bin it is part of
-                    for ( unsigned int channel = bin * nrChannelsPerBin; channel < (bin + 1) * nrChannelsPerBin; channel++ )
-                    {
-                        statistics_corrected.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[bin].getMean());
-                    }
+                    local_statistics[channel / nrChannelsPerBin].addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
                 }
+
+                // Compute the global statistics subtracting to each channel the mean of the bin it is part of
+                for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
+                {
+                    statistics_corrected.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[channel / nrChannelsPerBin].getMean());
+                }
+
                 // Flag and replace
                 for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
