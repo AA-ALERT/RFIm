@@ -855,14 +855,14 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     std::string binComputeMeanTemplate = "mean_bin_<%BIN_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((<%BIN_NUMBER%> * " + std::to_string(binSize) + ") * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
     "for ( " + config.getIntType() + " channel_id = (<%BIN_NUMBER%> * " + std::to_string(binSize) + ") + 1; channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id++ )\n"
     "{\n"
-    "mean_bin_<%BIN_NUMBER%> += time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (channel_id * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
+    "mean_bin_<%BIN_NUMBER%> += time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (channel_id * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)];\n"
     "}\n"
     "mean_bin_<%BIN_NUMBER%> /= " + std::to_string(binSize) + ";\n";
     // Local compute
     // Version without boundary checks
     std::string localComputeNoCheckTemplate = "for ( " + config.getIntType() + " channel_id = ((<%BIN_NUMBER%> * " + std::to_string(binSize) + ") + <%ITEM_NUMBER%>); channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " )\n"
     "{\n"
-    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] - mean_bin_<%BIN_NUMBER%>;\n"
+    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] - mean_bin_<%BIN_NUMBER%>;\n"
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
     "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
@@ -872,7 +872,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     std::string localComputeCheckTemplate = "for ( " + config.getIntType() + " channel_id = ((<%BIN_NUMBER%> * " + std::to_string(binSize) + ") + <%ITEM_NUMBER%>); channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " )\n"
     "{\n"
     "if ( channel_id + <%ITEM_NUMBER%> < " + std::to_string(binSize) + " ) {\n"
-    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] - mean_bin_<%BIN_NUMBER%>;\n"
+    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] - mean_bin_<%BIN_NUMBER%>;\n"
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
     "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
@@ -887,22 +887,22 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     // Replace with boundary checks
     std::string replaceConditionTemplate = "for ( " + config.getIntType() + " channel_id = ((<%BIN_NUMBER%> * " + std::to_string(binSize) + ") + <%ITEM_NUMBER%>); channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " )\n"
     "{\n"
-    "if ( (time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] - mean_bin_<%BIN_NUMBER%>) > (mean_0 + sigma_cut) ) {\n";
+    "if ( (time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] - mean_bin_<%BIN_NUMBER%>) > (mean_0 + sigma_cut) ) {\n";
     if ( typeid(DataType) == typeid(float) )
     {
-        replaceConditionTemplate += "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = mean_bin_<%BIN_NUMBER%>;\n";
+        replaceConditionTemplate += "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] = mean_bin_<%BIN_NUMBER%>;\n";
     }
     else
     {
-        replaceConditionTemplate += "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = convert_" + dataTypeName + "(mean_bin_<%BIN_NUMBER%>);\n";
+        replaceConditionTemplate += "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] = convert_" + dataTypeName + "(mean_bin_<%BIN_NUMBER%>);\n";
     }
     replaceConditionTemplate += "}\n"
     "}\n";
     // Replace without boundary checks
     std::string replaceTemplate = "for ( " + config.getIntType() + " channel_id = ((<%BIN_NUMBER%> * " + std::to_string(binSize) + ") + <%ITEM_NUMBER%>); channel_id < (<%BIN_NUMBER%> + 1) * " + std::to_string(binSize) + "; channel_id += " + std::to_string(config.getNrItemsD1()) + " )\n"
     "{\n"
-    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)];\n"
-    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + get_local_id(0)] = ((sample_value) * (convert_" + dataTypeName + "( (sample_value - mean_bin_<%BIN_NUMBER%>) <= (mean_0 + sigma_cut) ))) + (mean_bin_<%BIN_NUMBER%> * (convert_" + dataTypeName + "( (sample_value - mean_bin_<%BIN_NUMBER%>) > (mean_0 + sigma_cut) )));\n"
+    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)];\n"
+    "time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + ((channel_id + <%ITEM_NUMBER%>) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_group_id(0) * " + std::to_string(config.getNrThreadsD0()) + ") + (channel_id + <%ITEM_NUMBER%>)] = ((sample_value) * (convert_" + dataTypeName + "( (sample_value - mean_bin_<%BIN_NUMBER%>) <= (mean_0 + sigma_cut) ))) + (mean_bin_<%BIN_NUMBER%> * (convert_" + dataTypeName + "( (sample_value - mean_bin_<%BIN_NUMBER%>) > (mean_0 + sigma_cut) )));\n"
     "}\n";
     // End of kernel template
     // Code generation
@@ -933,12 +933,19 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
       temp = isa::utils::replace(&binVariablesTemplate, "<%BIN_NUMBER%>", binString);
       binVariables.append(*temp);
       delete temp;
-      temp = isa::utils::replace(&binComputeMeanTemplate, "<%BIN_NUMBER%>", binString);
-      binComputeMean.append(*temp);
-      delete temp;
       for ( unsigned int item = 0; item < config.getNrItemsD1(); item++ )
       {
           std::string itemString = std::to_string(item);
+
+          temp = isa::utils::replace(&binComputeMeanTemplate, "<%ITEM_NUMBER%>", itemString);
+          if ( item == 0 )
+          {
+              temp = isa::utils::replace(temp, " + 0", std::string(), true);
+          }
+          temp = isa::utils::replace(temp, "<%BIN_NUMBER%>", binString, true);
+          binComputeMean.append(*temp);
+          delete temp;
+
           if ( (binSize % config.getNrItemsD1()) == 0 )
           {
               temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
