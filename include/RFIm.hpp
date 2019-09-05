@@ -773,7 +773,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
         {
             for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
             {
-                isa::utils::Statistics<DataType> statistics_corrected;
+                isa::utils::Statistics<double> statistics_corrected;
                 isa::utils::Statistics<DataType> * local_statistics = new isa::utils::Statistics<DataType> [nrBins];
 
                 // Compute the statistics for a bin
