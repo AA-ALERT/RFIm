@@ -71,7 +71,10 @@ int main(int argc, char * argv[])
         parameters.setNrIterations(arguments.getSwitchArgument<unsigned int>("-iterations"));
         parameters.setMinThreads(arguments.getSwitchArgument<unsigned int>("-min_threads"));
         parameters.setMaxThreads(arguments.getSwitchArgument<unsigned int>("-max_threads"));
-        parameters.setMaxItems(arguments.getSwitchArgument<unsigned int>("-max_items"));
+        if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
+        {
+            parameters.setMaxItems(arguments.getSwitchArgument<unsigned int>("-max_items"));
+        }
         // Kernel specific command line arguments
         if ( kernelType == RFIm::RFImKernel::TimeDomainSigmaCut )
         {
@@ -157,9 +160,9 @@ void usage(const std::string & name)
     std::cerr << " -opencl_platform <int> -opencl_device <int> -padding <int>";
     std::cerr << " [-subbanding] -beams <int> -channels <int> -samples <int>";
     std::cerr << " [-time_domain_sigma_cut] [-frequency_domain_sigma_cut]";
-    std::cerr << " [-best] -iterations <int> -min_threads <int> -max_threads <int> -max_items <int>";
+    std::cerr << " [-best] -iterations <int> -min_threads <int> -max_threads <int>";
     std::cerr << std::endl;
-    std::cerr << "\tTime Domain Sigma Cut: -frequency_time -replace_mean -sigma <float>";
+    std::cerr << "\tTime Domain Sigma Cut: -max_items <int> -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
     std::cerr << "\tFrequency Domain Sigma Cut: -frequency_time -replace_mean -nr_bins <int> -sigma <float>";
     std::cerr << std::endl;

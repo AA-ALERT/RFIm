@@ -1036,41 +1036,33 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
     // Generate valid configurations
     for ( unsigned int threads = parameters.getMinThreads(); threads <= parameters.getMaxThreads(); threads *= 2 )
     {
-        for ( unsigned int items = 1; (items * 3) + 3 + nrBins <= parameters.getMaxItems(); items++ )
+        if ( threads > observation.getNrSamplesPerDispersedBatch(subbandDedispersion) )
         {
-            if ( threads > observation.getNrSamplesPerDispersedBatch(subbandDedispersion) )
-            {
-                break;
-            }
-            if ( items > (observation.getNrChannels() / nrBins) )
-            {
-                break;
-            }
-            RFImConfig baseConfig, tempConfig;
-            baseConfig.setSubbandDedispersion(subbandDedispersion);
-            baseConfig.setNrThreadsD0(threads);
-            baseConfig.setNrItemsD1(items);
-            // conditional = 0, int = 0
-            tempConfig = baseConfig;
-            tempConfig.setConditionalReplacement(false);
-            tempConfig.setIntType(0);
-            configurations.push_back(tempConfig);
-            // conditional = 0, int = 1
-            tempConfig = baseConfig;
-            tempConfig.setConditionalReplacement(false);
-            tempConfig.setIntType(1);
-            configurations.push_back(tempConfig);
-            // conditional = 1, int = 0
-            tempConfig = baseConfig;
-            tempConfig.setConditionalReplacement(true);
-            tempConfig.setIntType(0);
-            configurations.push_back(tempConfig);
-            // conditional = 1, int = 1
-            tempConfig = baseConfig;
-            tempConfig.setConditionalReplacement(true);
-            tempConfig.setIntType(1);
-            configurations.push_back(tempConfig);
+            break;
         }
+        RFImConfig baseConfig, tempConfig;
+        baseConfig.setSubbandDedispersion(subbandDedispersion);
+        baseConfig.setNrThreadsD0(threads);
+        // conditional = 0, int = 0
+        tempConfig = baseConfig;
+        tempConfig.setConditionalReplacement(false);
+        tempConfig.setIntType(0);
+        configurations.push_back(tempConfig);
+        // conditional = 0, int = 1
+        tempConfig = baseConfig;
+        tempConfig.setConditionalReplacement(false);
+        tempConfig.setIntType(1);
+        configurations.push_back(tempConfig);
+        // conditional = 1, int = 0
+        tempConfig = baseConfig;
+        tempConfig.setConditionalReplacement(true);
+        tempConfig.setIntType(0);
+        configurations.push_back(tempConfig);
+        // conditional = 1, int = 1
+        tempConfig = baseConfig;
+        tempConfig.setConditionalReplacement(true);
+        tempConfig.setIntType(1);
+        configurations.push_back(tempConfig);
     }
     // Test performance of each configuration
     std::cout << std::fixed;
