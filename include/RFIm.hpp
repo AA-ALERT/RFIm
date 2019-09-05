@@ -791,7 +791,7 @@ std::uint64_t RFIm::frequencyDomainSigmaCut(const bool subbandDedispersion, cons
                 // Flag and replace
                 for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
                 {
-                    DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[channel / nrChannelsPerBin].getMean();
+                    double sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id) - local_statistics[channel / nrChannelsPerBin].getMean();
                     if ( sample_value > statistics_corrected.getMean() + (sigmaCut * statistics_corrected.getStandardDeviation()) )
                     {
                         replacedSamples++;
