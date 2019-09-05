@@ -827,7 +827,7 @@ std::string * RFIm::getFrequencyDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMe
     *code = "__kernel void frequencyDomainSigmaCut(__global " + dataTypeName + " * const restrict time_series) {\n"
     "float delta = 0.0f;\n"
     "float sigma_cut = 0.0f;\n"
-    + dataTypeName + " sample_value;\n"
+    "float sample_value;\n"
     "<%LOCAL_VARIABLES%>"
     "<%BIN_VARIABLES%>"
     "\n"
