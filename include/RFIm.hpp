@@ -726,7 +726,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             delete kernel;
             if (err.err() == -4 || err.err() == -61)
             {
-                throw err;
+                throw;
             }
             initializeDevice = true;
             break;
@@ -1203,7 +1203,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
             delete kernel;
             if (err.err() == -4 || err.err() == -61)
             {
-                throw err;
+                throw;
             }
             initializeDevice = true;
             break;
