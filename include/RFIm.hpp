@@ -729,7 +729,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
                 throw;
             }
             initializeDevice = true;
-            break;
+            continue;
         }
         delete kernel;
         if ( timer.getAverageTime() < bestTime )
@@ -1206,7 +1206,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
                 throw;
             }
             initializeDevice = true;
-            break;
+            continue;
         }
         delete kernel;
         if ( timer.getAverageTime() < bestTime )
