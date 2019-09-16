@@ -90,7 +90,6 @@ int main(int argc, char * argv[])
         {
             kernelConfig.setSubbandDedispersion(arguments.getSwitch("-subbanding"));
             kernelConfig.setNrThreadsD0(arguments.getSwitchArgument<unsigned int>("-threads_D0"));
-            kernelConfig.setNrItemsD1(arguments.getSwitchArgument<unsigned int>("-items_D1"));
             kernelConfig.setConditionalReplacement(arguments.getSwitch("-conditional_replacement"));
             kernelConfig.setIntType(arguments.getSwitchArgument<unsigned int>("-int_type"));
             nrBins = arguments.getSwitchArgument<unsigned int>("-nr_bins");
@@ -191,7 +190,7 @@ void usage(const std::string & name)
     std::cerr << std::endl;
     std::cerr << "\tTime Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D0 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -sigma <float>";
     std::cerr << std::endl;
-    std::cerr << "\tFrequency Domain Sigma Cut: [-subbanding] -threads_D0 <int> -items_D1 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -nr_bins <int> -sigma <float>";
+    std::cerr << "\tFrequency Domain Sigma Cut: [-subbanding] -threads_D0 <int> [-conditional_replacement] -int_type <0,1> -frequency_time -replace_mean -nr_bins <int> -sigma <float>";
     std::cerr << std::endl;
     std::cerr << std::endl;
 }
