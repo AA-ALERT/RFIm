@@ -410,21 +410,17 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
     std::string localVariablesTemplate = "float counter_<%ITEM_NUMBER%> = 1.0f;\n"
     "float variance_<%ITEM_NUMBER%> = 0.0f;\n"
     "float mean_<%ITEM_NUMBER%> = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n";
+    // Boundary check
+    std::string boundaryCheckTemplate = "if ( sample_id + <%ITEM_OFFSET%> < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + " ) {\n"
+    "<%BODY%>"
+    "}\n";
     // Local compute
     // Version without boundary checks
-    std::string localComputeNoCheckTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
+    std::string localComputeTemplate = "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
     "counter_<%ITEM_NUMBER%> += 1.0f;\n"
     "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
     "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
     "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n";
-    // Version with boundary checks
-    std::string localComputeCheckTemplate = "if ( sample_id + <%ITEM_OFFSET%> < " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion())) + " ) {\n"
-    "sample_value = time_series[(get_global_id(2) * " + std::to_string(observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + (get_global_id(1) * " + std::to_string(observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion(), padding / sizeof(DataType))) + ") + get_local_id(0) + <%ITEM_OFFSET%>];\n"
-    "counter_<%ITEM_NUMBER%> += 1.0f;\n"
-    "delta = sample_value - mean_<%ITEM_NUMBER%>;\n"
-    "mean_<%ITEM_NUMBER%> += delta / counter_<%ITEM_NUMBER%>;\n"
-    "variance_<%ITEM_NUMBER%> += delta * (sample_value - mean_<%ITEM_NUMBER%>);\n"
-    "}\n";
     // In-thread reduction
     std::string localReduceTemplate = "delta = mean_<%ITEM_NUMBER%> - mean_0;\n"
     "counter_0 += counter_<%ITEM_NUMBER%>;\n"
@@ -466,11 +462,12 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
         delete temp;
         if ( (observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) % (config.getNrThreadsD0() * config.getNrItemsD0())) == 0 )
         {
-            temp = isa::utils::replace(&localComputeNoCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(&localComputeTemplate, "<%ITEM_NUMBER%>", itemString);
         }
         else
         {
-            temp = isa::utils::replace(&localComputeCheckTemplate, "<%ITEM_NUMBER%>", itemString);
+            temp = isa::utils::replace(&boundaryCheckTemplate, "<%BODY%>", localComputeTemplate);
+            temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
         }
         if ( item == 0 )
         {
@@ -488,13 +485,29 @@ std::string * RFIm::getTimeDomainSigmaCutOpenCL_FrequencyTime_ReplaceWithMean(co
             localReduce.append(*temp);
             delete temp;
         }
-        if ( config.getConditionalReplacement() )
+        if ( (observation.getNrSamplesPerDispersedBatch(config.getSubbandDedispersion()) % (config.getNrThreadsD0() * config.getNrItemsD0())) == 0 )
         {
-            temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
+            if ( config.getConditionalReplacement() )
+            {
+                temp = isa::utils::replace(&replaceConditionTemplate, "<%ITEM_NUMBER%>", itemString);
+            }
+            else
+            {
+                temp = isa::utils::replace(&replaceTemplate, "<%ITEM_NUMBER%>", itemString);
+            }
         }
         else
         {
-            temp = isa::utils::replace(&replaceTemplate, "<%ITEM_NUMBER%>", itemString);
+            if ( config.getConditionalReplacement() )
+            {
+                temp = isa::utils::replace(&boundaryCheckTemplate, "<%BODY%>", replaceConditionTemplate);
+                temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
+            }
+            else
+            {
+                temp = isa::utils::replace(&boundaryCheckTemplate, "<%BODY%>", replaceTemplate);
+                temp = isa::utils::replace(temp, "<%ITEM_NUMBER%>", itemString, true);
+            }
         }
         if ( item == 0 )
         {
