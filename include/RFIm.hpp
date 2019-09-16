@@ -556,7 +556,7 @@ void RFIm::testTimeDomainSigmaCut(const bool printCode, const bool printResults,
     catch ( const cl::Error & err )
     {
         std::cerr << "OpenCL device memory allocation error: " << std::to_string(err.err()) << "." << std::endl;
-        throw err;
+        throw;
     }
     try
     {
@@ -695,7 +695,7 @@ void RFIm::tuneTimeDomainSigmaCut(const bool subbandDedispersion, const isa::Ope
             catch ( const cl::Error & err )
             {
                 std::cerr << "OpenCL device memory allocation error: " << std::to_string(err.err()) << "." << std::endl;
-                throw err;
+                throw;
             }
             initializeDevice = false;
         }
@@ -963,7 +963,7 @@ void RFIm::testFrequencyDomainSigmaCut(const bool printCode, const bool printRes
     catch ( const cl::Error & err )
     {
         std::cerr << "OpenCL device memory allocation error: " << std::to_string(err.err()) << "." << std::endl;
-        throw err;
+        throw;
     }
     try
     {
@@ -1098,7 +1098,7 @@ void RFIm::tuneFrequencyDomainSigmaCut(const bool subbandDedispersion, const isa
             catch ( const cl::Error & err )
             {
                 std::cerr << "OpenCL device memory allocation error: " << std::to_string(err.err()) << "." << std::endl;
-                throw err;
+                throw;
             }
             initializeDevice = false;
         }
