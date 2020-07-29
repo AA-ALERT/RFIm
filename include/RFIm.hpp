@@ -324,11 +324,13 @@ std::uint64_t RFIm::timeDomainSigmaCut(const bool subbandDedispersion, const Dat
         {
             for ( unsigned int channel = 0; channel < observation.getNrChannels(); channel++ )
             {
+                // Compute statistics
                 isa::utils::Statistics<DataType> statistics;
                 for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
                 {
                     statistics.addElement(time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id));
                 }
+                // Clean data
                 for ( unsigned int sample_id = 0; sample_id < observation.getNrSamplesPerDispersedBatch(subbandDedispersion); sample_id++ )
                 {
                     DataType sample_value = time_series.at((beam * observation.getNrChannels() * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + (channel * observation.getNrSamplesPerDispersedBatch(subbandDedispersion, padding / sizeof(DataType))) + sample_id);
